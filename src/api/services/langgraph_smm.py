@@ -18,7 +18,7 @@ def _validate_input(state: SmmState) -> SmmState:
 
 
 def _fetch_audience_stub(state: SmmState) -> SmmState:
-    # TODO: integrate VK/Telegram API here
+    # TODO: сюда потом прикрутить VK/Telegram API
     state["raw_audience"] = {
         "members": 0,
         "activity": [],
@@ -30,13 +30,13 @@ def _fetch_audience_stub(state: SmmState) -> SmmState:
 
 
 def _cluster_audience_stub(state: SmmState) -> SmmState:
-    # TODO: replace with real clustering
+    # TODO: тут будет нормальная кластеризация
     state["clusters"] = []
     return state
 
 
 def _find_competitors_stub(state: SmmState) -> SmmState:
-    # TODO: replace with actual competitor detection
+    # TODO: позже сделаем поиск конкурентов
     state["competitors"] = []
     return state
 
@@ -86,4 +86,3 @@ def run_audience_graph(platform: str, source_id: str) -> Dict[str, Any]:
         "summary": result.get("summary", {}),
         "raw_audience": result.get("raw_audience", {}),
     }
-
