@@ -20,3 +20,7 @@ class TelegramPostNotFoundError(ServiceError):
 
 class TelegramOperationError(ServiceError):
     """Raised for generic Telegram API operation failures."""
+
+
+class AIEnhancementError(ServiceError):
+    """Raised when AI enhancement is required but unavailable or failed."""

@@ -1,6 +1,12 @@
 from typing import Protocol
 
-from services.dto import AuthStatus, AuthorizedUser, QRCodePayload, TelegramPostAnalysis
+from src.api.services.dto import (
+    AuthStatus,
+    AuthorizedUser,
+    GigaChatStatus,
+    QRCodePayload,
+    TelegramAudienceReport,
+)
 
 
 class AuthServicePort(Protocol):
@@ -23,6 +29,16 @@ class AuthServicePort(Protocol):
         ...
 
 
-class PostAnalyzerPort(Protocol):
-    async def analyze(self, url: str) -> TelegramPostAnalysis:
+class AudienceAnalyzerPort(Protocol):
+    async def analyze(
+        self,
+        source: str,
+        participant_limit: int = 200,
+        message_limit: int = 100,
+    ) -> TelegramAudienceReport:
+        ...
+
+
+class AIStatusPort(Protocol):
+    def get_status(self) -> GigaChatStatus:
         ...

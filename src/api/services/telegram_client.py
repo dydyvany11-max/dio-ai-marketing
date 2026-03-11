@@ -1,12 +1,13 @@
 from telethon import TelegramClient
 
-from config import TelegramSettings
+from src.api.config import TelegramSettings
+from src.api.services.errors import TelegramOperationError
 
 
 class TelegramClientService:
     def __init__(self, settings: TelegramSettings):
         self._client = TelegramClient(
-            settings.session_name,
+            settings.session_path,
             settings.api_id,
             settings.api_hash,
         )
@@ -17,7 +18,12 @@ class TelegramClientService:
 
     async def ensure_connected(self) -> None:
         if not self._client.is_connected():
-            await self._client.connect()
+            try:
+                await self._client.connect()
+            except Exception as exc:
+                raise TelegramOperationError(
+                    f"Failed to connect to Telegram: {exc}"
+                ) from exc
 
     async def disconnect(self) -> None:
         if self._client.is_connected():

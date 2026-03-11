@@ -6,13 +6,13 @@ from typing import Optional
 import qrcode
 from telethon.errors import SessionPasswordNeededError
 
-from services.dto import AuthStatus, AuthorizedUser, QRCodePayload
-from services.errors import (
+from src.api.services.dto import AuthStatus, AuthorizedUser, QRCodePayload
+from src.api.services.errors import (
     AlreadyAuthorizedError,
     AuthorizationRequiredError,
     TelegramOperationError,
 )
-from services.telegram_client import TelegramClientService
+from src.api.services.telegram_client import TelegramClientService
 
 
 @dataclass
@@ -94,7 +94,6 @@ class TelegramAuthService:
 
         self._cancel_previous_wait_task()
         self._qr_wait_task = asyncio.create_task(self._wait_for_qr_login(self._qr_login_obj))
-
         return self._qr_login_obj.url, self._qr_state.expires_at
 
     def _cancel_previous_wait_task(self) -> None:
