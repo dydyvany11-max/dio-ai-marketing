@@ -24,3 +24,11 @@ class TelegramOperationError(ServiceError):
 
 class AIEnhancementError(ServiceError):
     """Raised when AI enhancement is required but unavailable or failed."""
+
+
+class VKAuthorizationError(ServiceError):
+    """Raised when VK OAuth or access token is missing/invalid."""
+
+
+class VKOperationError(ServiceError):
+    """Raised for generic VK API operation failures."""

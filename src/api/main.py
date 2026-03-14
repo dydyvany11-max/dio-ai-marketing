@@ -3,11 +3,12 @@ import os
 
 from fastapi import FastAPI
 
-from src.api.config import is_telegram_configured
+from src.api.config import is_telegram_configured, is_vk_configured
 from src.api.dependencies import get_client_service
 from src.api.routers.audience import router as audience_router
 from src.api.routers.auth import router as auth_router
 from src.api.routers.system import router as system_router
+from src.api.routers.vk import router as vk_router
 logger = logging.getLogger(__name__)
 
 
@@ -26,6 +27,13 @@ def create_app() -> FastAPI:
     else:
         logger.warning(
             "Telegram routers disabled: set TG_API_ID and TG_API_HASH in .env"
+        )
+
+    if is_vk_configured():
+        app.include_router(vk_router)
+    else:
+        logger.warning(
+            "VK routers disabled: set VK_APP_ID, VK_APP_SECRET, VK_REDIRECT_URI in .env"
         )
 
     return app

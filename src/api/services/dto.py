@@ -111,3 +111,40 @@ class GigaChatStatus:
     model: str | None
     auth_mode: str | None
     message: str
+
+
+@dataclass(frozen=True)
+class VKGroupInfo:
+    group_id: int
+    name: str
+    screen_name: str | None
+    members_count: int | None
+
+
+@dataclass(frozen=True)
+class VKPostMetrics:
+    post_id: int
+    date: int
+    views: int
+    likes: int
+    comments: int
+    reposts: int
+
+
+@dataclass(frozen=True)
+class VKAudienceReport:
+    group: VKGroupInfo
+    average_views: int
+    average_likes: int
+    average_comments: int
+    average_reposts: int
+    posts_per_day: float
+    total_posts_analyzed: int
+    top_posts: list[VKPostMetrics]
+    limitations: list[str]
+
+
+@dataclass(frozen=True)
+class VKPublishResult:
+    post_id: int
+    owner_id: int

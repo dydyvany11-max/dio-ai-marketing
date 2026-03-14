@@ -183,3 +183,78 @@ class TelegramAudienceReportResponse(BaseModel):
     )
     summary: str = Field(description="РљСЂР°С‚РєР°СЏ РёС‚РѕРіРѕРІР°СЏ СЃРІРѕРґРєР°")
     limitations: list[str] = Field(description="РћРіСЂР°РЅРёС‡РµРЅРёСЏ Рё РґРѕРїСѓС‰РµРЅРёСЏ Р°РЅР°Р»РёР·Р°")
+
+class VKAuthUrlResponse(BaseModel):
+    url: str = Field(description="VK OAuth URL для получения code")
+
+
+class VKAuthCallbackRequest(BaseModel):
+    code: str = Field(description="VK OAuth code из redirect")
+
+
+class VKAuthCallbackResponse(BaseModel):
+    access_token: str = Field(description="VK access_token")
+    expires_in: int | None = Field(default=None, description="Время жизни токена, сек")
+    user_id: int | None = Field(default=None, description="VK user_id владельца токена")
+
+
+class VKAudienceAnalyzeRequest(BaseModel):
+    source: str = Field(
+        description="Ссылка на группу, screen_name или ID",
+        examples=["https://vk.com/club1", "club1", "123456"],
+    )
+    access_token: str = Field(description="VK access_token с правами groups, wall, stats")
+    post_limit: int = Field(default=50, ge=1, le=100, description="Сколько постов анализировать")
+
+
+class VKGroupInfoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    group_id: int = Field(description="ID группы")
+    name: str = Field(description="Название группы")
+    screen_name: str | None = Field(default=None, description="screen_name")
+    members_count: int | None = Field(default=None, description="Количество участников (если доступно)")
+
+
+class VKPostMetricsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    post_id: int = Field(description="ID поста")
+    date: int = Field(description="Unix timestamp публикации")
+    views: int = Field(description="Просмотры")
+    likes: int = Field(description="Лайки")
+    comments: int = Field(description="Комментарии")
+    reposts: int = Field(description="Репосты")
+
+
+class VKAudienceReportResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    group: VKGroupInfoResponse
+    average_views: int
+    average_likes: int
+    average_comments: int
+    average_reposts: int
+    posts_per_day: float
+    total_posts_analyzed: int
+    top_posts: list[VKPostMetricsResponse]
+    limitations: list[str]
+
+
+class VKPublishRequest(BaseModel):
+    access_token: str = Field(description="VK access_token")
+    group_id: int = Field(description="ID группы")
+    message: str = Field(default="", description="Текст поста")
+    attachments: str | None = Field(
+        default=None,
+        description="Строка вложений VK, например 'photo1_1,photo1_2'",
+    )
+    publish_date: int | None = Field(
+        default=None,
+        description="Unix timestamp для отложенной публикации",
+    )
+
+
+class VKPublishResponse(BaseModel):
+    post_id: int = Field(description="ID созданного поста")
+    owner_id: int = Field(description="Owner ID (группа = отрицательный)")

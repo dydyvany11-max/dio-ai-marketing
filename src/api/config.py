@@ -20,6 +20,14 @@ class TelegramSettings:
 
 
 @dataclass(frozen=True)
+class VKSettings:
+    app_id: int
+    app_secret: str
+    redirect_uri: str
+    api_version: str
+
+
+@dataclass(frozen=True)
 class GigaChatSettings:
     credentials: str | None
     authorization_key: str | None
@@ -60,6 +68,20 @@ def is_gigachat_configured() -> bool:
     )
 
 
+def is_vk_configured() -> bool:
+    _load_project_env()
+    app_id_raw = os.getenv("VK_APP_ID", "").strip()
+    app_secret = os.getenv("VK_APP_SECRET", "").strip()
+    redirect_uri = os.getenv("VK_REDIRECT_URI", "").strip()
+
+    try:
+        app_id = int(app_id_raw)
+    except (TypeError, ValueError):
+        return False
+
+    return app_id > 0 and bool(app_secret) and bool(redirect_uri)
+
+
 def load_settings() -> TelegramSettings:
     _load_project_env()
 
@@ -75,6 +97,30 @@ def load_settings() -> TelegramSettings:
         api_id=api_id,
         api_hash=api_hash,
         session_path=session_path,
+    )
+
+
+def load_vk_settings() -> VKSettings:
+    _load_project_env()
+
+    app_id_raw = os.getenv("VK_APP_ID", "0").strip()
+    app_secret = os.getenv("VK_APP_SECRET", "").strip()
+    redirect_uri = os.getenv("VK_REDIRECT_URI", "").strip()
+    api_version = os.getenv("VK_API_VERSION", "5.199").strip() or "5.199"
+
+    try:
+        app_id = int(app_id_raw)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError("Set VK_APP_ID in .env") from exc
+
+    if not app_id or not app_secret or not redirect_uri:
+        raise RuntimeError("Set VK_APP_ID, VK_APP_SECRET, VK_REDIRECT_URI in .env")
+
+    return VKSettings(
+        app_id=app_id,
+        app_secret=app_secret,
+        redirect_uri=redirect_uri,
+        api_version=api_version,
     )
 
 
