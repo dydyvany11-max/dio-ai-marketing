@@ -28,6 +28,14 @@ class VKSettings:
 
 
 @dataclass(frozen=True)
+class VKIDSettings:
+    app_id: int
+    redirect_uri: str
+    domain: str
+    scope: str
+
+
+@dataclass(frozen=True)
 class GigaChatSettings:
     credentials: str | None
     authorization_key: str | None
@@ -82,6 +90,19 @@ def is_vk_configured() -> bool:
     return app_id > 0 and bool(app_secret) and bool(redirect_uri)
 
 
+def is_vkid_configured() -> bool:
+    _load_project_env()
+    app_id_raw = os.getenv("VKID_APP_ID", "").strip() or os.getenv("VK_APP_ID", "").strip()
+    redirect_uri = os.getenv("VKID_REDIRECT_URI", "").strip() or os.getenv("VK_REDIRECT_URI", "").strip()
+
+    try:
+        app_id = int(app_id_raw)
+    except (TypeError, ValueError):
+        return False
+
+    return app_id > 0 and bool(redirect_uri)
+
+
 def load_settings() -> TelegramSettings:
     _load_project_env()
 
@@ -121,6 +142,49 @@ def load_vk_settings() -> VKSettings:
         app_secret=app_secret,
         redirect_uri=redirect_uri,
         api_version=api_version,
+    )
+
+
+def load_vk_settings_from_vkid() -> VKSettings:
+    _load_project_env()
+
+    app_id_raw = os.getenv("VKID_APP_ID", "").strip() or os.getenv("VK_APP_ID", "0").strip()
+    api_version = os.getenv("VK_API_VERSION", "5.199").strip() or "5.199"
+
+    try:
+        app_id = int(app_id_raw)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError("Set VKID_APP_ID (or VK_APP_ID) in .env") from exc
+
+    return VKSettings(
+        app_id=app_id,
+        app_secret="",
+        redirect_uri="",
+        api_version=api_version,
+    )
+
+
+def load_vkid_settings() -> VKIDSettings:
+    _load_project_env()
+
+    app_id_raw = os.getenv("VKID_APP_ID", "").strip() or os.getenv("VK_APP_ID", "0").strip()
+    redirect_uri = os.getenv("VKID_REDIRECT_URI", "").strip() or os.getenv("VK_REDIRECT_URI", "").strip()
+    domain = os.getenv("VKID_DOMAIN", "id.vk.ru").strip() or "id.vk.ru"
+    scope = os.getenv("VKID_SCOPE", "groups wall stats").strip() or "groups wall stats"
+
+    try:
+        app_id = int(app_id_raw)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError("Set VKID_APP_ID (or VK_APP_ID) in .env") from exc
+
+    if not app_id or not redirect_uri:
+        raise RuntimeError("Set VKID_APP_ID (or VK_APP_ID) and VKID_REDIRECT_URI (or VK_REDIRECT_URI) in .env")
+
+    return VKIDSettings(
+        app_id=app_id,
+        redirect_uri=redirect_uri,
+        domain=domain,
+        scope=scope,
     )
 
 

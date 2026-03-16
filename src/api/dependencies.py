@@ -4,9 +4,12 @@ from typing import NamedTuple
 from src.api.config import (
     is_gigachat_configured,
     is_telegram_configured,
+    is_vkid_configured,
     is_vk_configured,
     load_gigachat_settings,
     load_settings,
+    load_vk_settings_from_vkid,
+    load_vkid_settings,
     load_vk_settings,
 )
 from src.api.services.auth import TelegramAuthService
@@ -17,6 +20,7 @@ from src.api.services.interfaces import AuthServicePort, AudienceAnalyzerPort
 from src.api.services.telegram_client import TelegramClientService
 from src.api.services.vk_audience import VKAudienceAnalyzer
 from src.api.services.vk_client import VKClient
+from src.api.services.vkid_client import VKIDClient
 from src.api.services.vk_publisher import VKPublisher
 
 
@@ -25,6 +29,7 @@ class _Services(NamedTuple):
     auth_service: AuthServicePort | None
     audience_analyzer: AudienceAnalyzerPort | None
     vk_client: VKClient | None
+    vkid_client: VKIDClient | None
     vk_audience: VKAudienceAnalyzer | None
     vk_publisher: VKPublisher | None
 
@@ -43,17 +48,25 @@ def _build_services() -> _Services:
             ai_enhancer = GigaChatAudienceEnhancer(load_gigachat_settings())
         audience_analyzer = TelegramAudienceAnalyzer(client_service, ai_enhancer=ai_enhancer)
     vk_client = None
+    vkid_client = None
     vk_audience = None
     vk_publisher = None
     if is_vk_configured():
         vk_client = VKClient(load_vk_settings())
         vk_audience = VKAudienceAnalyzer(vk_client)
         vk_publisher = VKPublisher(vk_client)
+    elif is_vkid_configured():
+        vk_client = VKClient(load_vk_settings_from_vkid())
+        vk_audience = VKAudienceAnalyzer(vk_client)
+        vk_publisher = VKPublisher(vk_client)
+    if is_vkid_configured():
+        vkid_client = VKIDClient(load_vkid_settings())
     return _Services(
         client_service=client_service,
         auth_service=auth_service,
         audience_analyzer=audience_analyzer,
         vk_client=vk_client,
+        vkid_client=vkid_client,
         vk_audience=vk_audience,
         vk_publisher=vk_publisher,
     )
@@ -91,6 +104,13 @@ def get_vk_audience() -> VKAudienceAnalyzer:
     service = _build_services().vk_audience
     if service is None:
         raise RuntimeError("VK is not configured")
+    return service
+
+
+def get_vkid_client() -> VKIDClient:
+    service = _build_services().vkid_client
+    if service is None:
+        raise RuntimeError("VK ID is not configured")
     return service
 
 
