@@ -16,6 +16,7 @@ from src.api.config import GigaChatSettings
 from src.api.services.dto import (
     AudiencePersona,
     ChannelTheme,
+    CompetitorMatch,
     ContentInsights,
     TelegramAudienceReport,
 )
@@ -106,6 +107,45 @@ class GigaChatAudienceEnhancer:
 
     def validate_connection(self) -> None:
         self._get_access_token()
+
+    def explain_competitor_match(
+        self,
+        base_report: TelegramAudienceReport,
+        candidate_report: TelegramAudienceReport,
+        match: CompetitorMatch,
+    ) -> str:
+        payload = {
+            "base_channel": {
+                "title": base_report.source.title,
+                "dominant_theme": base_report.dominant_theme.label,
+                "top_topics": [theme.label for theme in base_report.channel_themes[:4]],
+            },
+            "candidate_channel": {
+                "title": candidate_report.source.title,
+                "dominant_theme": candidate_report.dominant_theme.label,
+                "top_topics": [theme.label for theme in candidate_report.channel_themes[:4]],
+            },
+            "comparison": {
+                "competitor_type": match.relation_type,
+                "match_percent": round(match.similarity_score * 100, 1),
+                "common_topics": match.matched_themes[:4],
+                "common_content_signals": match.matched_keywords[:4],
+                "limitations": match.disqualifiers[:3],
+            },
+        }
+        prompt = (
+            "Объясни, почему один Telegram-канал похож на другой.\n"
+            "Напиши короткое объяснение на русском языке в 1-2 предложениях.\n"
+            "Никакого markdown, списков, дисклеймеров и вводных фраз.\n"
+            "Говори просто и понятно для бизнеса.\n"
+            "Если канал не прямой конкурент, прямо скажи, чего не хватило.\n\n"
+            f"Данные:\n{json.dumps(payload, ensure_ascii=False)}"
+        )
+        content = self._chat_plain(prompt)
+        text = self._clean_plain_response(content)
+        if not text:
+            raise AIEnhancementError("GigaChat не вернул текстовое объяснение по конкуренту")
+        return text
 
     def _build_prompt(self, report: TelegramAudienceReport, *, compact: bool) -> str:
         payload = self._report_to_payload(report, compact=compact)
@@ -202,10 +242,8 @@ class GigaChatAudienceEnhancer:
         }
 
     def _chat(self, prompt: str) -> str:
-        token = self._get_access_token()
-        payload = {
-            "model": self._settings.model,
-            "messages": [
+        return self._chat_with_messages(
+            [
                 {
                     "role": "system",
                     "content": (
@@ -214,7 +252,28 @@ class GigaChatAudienceEnhancer:
                     ),
                 },
                 {"role": "user", "content": prompt},
-            ],
+            ]
+        )
+
+    def _chat_plain(self, prompt: str) -> str:
+        return self._chat_with_messages(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "Ты пишешь кратко, по-русски, без markdown, дисклеймеров и вводных фраз. "
+                        "Нужно вернуть только полезный текст ответа."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ]
+        )
+
+    def _chat_with_messages(self, messages: list[dict[str, str]]) -> str:
+        token = self._get_access_token()
+        payload = {
+            "model": self._settings.model,
+            "messages": messages,
             "temperature": 0.05,
         }
         headers = {
@@ -351,6 +410,21 @@ class GigaChatAudienceEnhancer:
     def _safe_snippet(content: str, limit: int = 300) -> str:
         text = re.sub(r"\s+", " ", (content or "").strip())
         return text[:limit]
+
+    @staticmethod
+    def _clean_plain_response(content: str) -> str:
+        text = re.sub(r"\s+", " ", (content or "").strip())
+        text = re.sub(r"^```(?:text)?\s*", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"\s*```$", "", text)
+        banned_prefixes = (
+            "Как и любая языковая модель",
+            "Я не могу",
+            "Извините",
+        )
+        for prefix in banned_prefixes:
+            if text.startswith(prefix):
+                raise AIEnhancementError("GigaChat вернул служебный или бесполезный текст вместо объяснения")
+        return text[:500]
 
     @staticmethod
     def _truncate_text(text: str, limit: int) -> str:

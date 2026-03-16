@@ -172,7 +172,13 @@ class TelegramAudienceAnalyzer:
                     source=candidate_source,
                     message_limit=message_limit,
                 )
-                matches.append(self._build_competitor_match(base_report, candidate_report))
+                match = self._build_competitor_match(base_report, candidate_report)
+                match = self._enhance_competitor_match_reason(
+                    base_report=base_report,
+                    candidate_report=candidate_report,
+                    match=match,
+                )
+                matches.append(match)
             except (AuthorizationRequiredError, TelegramOperationError) as exc:
                 failures.append(CompetitorFailure(source=candidate_source, error=str(exc)))
 
@@ -194,6 +200,42 @@ class TelegramAudienceAnalyzer:
             competitors=matches[:top_k],
             failed_candidates=failures,
         )
+
+    def _enhance_competitor_match_reason(
+        self,
+        *,
+        base_report: TelegramAudienceReport,
+        candidate_report: TelegramAudienceReport,
+        match: CompetitorMatch,
+    ) -> CompetitorMatch:
+        if self._ai_enhancer is None or not hasattr(self._ai_enhancer, "explain_competitor_match"):
+            return match
+
+        try:
+            reason = self._ai_enhancer.explain_competitor_match(
+                base_report=base_report,
+                candidate_report=candidate_report,
+                match=match,
+            )
+            return CompetitorMatch(
+                source=match.source,
+                similarity_score=match.similarity_score,
+                relation_type=match.relation_type,
+                audience_similarity=match.audience_similarity,
+                engagement_similarity=match.engagement_similarity,
+                format_similarity=match.format_similarity,
+                shared_theme_count=match.shared_theme_count,
+                shared_specific_theme_count=match.shared_specific_theme_count,
+                dominant_specific_theme=match.dominant_specific_theme,
+                candidate_dominant_specific_theme=match.candidate_dominant_specific_theme,
+                matched_themes=match.matched_themes,
+                matched_keywords=match.matched_keywords,
+                disqualifiers=match.disqualifiers,
+                reason=reason,
+            )
+        except Exception as exc:
+            logger.warning("GigaChat competitor explanation failed: %s", exc)
+            return match
     async def _resolve_entity(self, source: str):
         client = self._client_service.client
         normalized = self._normalize_source(source)
