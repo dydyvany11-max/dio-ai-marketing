@@ -4,7 +4,6 @@ import io
 
 import matplotlib.pyplot as plt
 
-
 from src.api.services.dto import CompetitorDiscoveryReport, TelegramAudienceReport
 
 
@@ -21,7 +20,7 @@ def build_audience_dashboard(report: TelegramAudienceReport) -> bytes:
     grid = fig.add_gridspec(2, 2, hspace=0.28, wspace=0.18)
 
     ax_themes = fig.add_subplot(grid[0, 0], facecolor="#fffaf3")
-    ax_age = fig.add_subplot(grid[0, 1], facecolor="#fffaf3")
+    ax_metrics = fig.add_subplot(grid[0, 1], facecolor="#fffaf3")
     ax_interests = fig.add_subplot(grid[1, 0], facecolor="#fffaf3")
     ax_summary = fig.add_subplot(grid[1, 1], facecolor="#fffaf3")
 
@@ -32,18 +31,21 @@ def build_audience_dashboard(report: TelegramAudienceReport) -> bytes:
     ax_themes.set_title("Темы канала", fontsize=15, fontweight="bold", loc="left")
     ax_themes.set_xlabel("Доля, %")
 
-    age_labels = [item.label for item in report.age_hypothesis_clusters]
-    age_values = [round(item.share * 100, 1) for item in report.age_hypothesis_clusters]
-    age_colors = ["#2f6690", "#3a7ca5", "#81c3d7", "#d9dcd6", "#16425b"][: len(age_values)]
-    ax_age.bar(age_labels, age_values, color=age_colors)
-    ax_age.set_title("Возрастная гипотеза", fontsize=15, fontweight="bold", loc="left")
-    ax_age.set_ylabel("Доля, %")
+    metric_labels = ["View Rate", "Deep ER", "Posts/Day"]
+    metric_values = [
+        round(report.engagement_metrics.view_rate * 100, 1),
+        round(report.engagement_metrics.deep_engagement_rate * 100, 1),
+        round(report.engagement_metrics.posts_per_day, 1),
+    ]
+    ax_metrics.bar(metric_labels, metric_values, color=["#2f6690", "#3a7ca5", "#81c3d7"])
+    ax_metrics.set_title("Метрики постов", fontsize=15, fontweight="bold", loc="left")
+    ax_metrics.set_ylabel("Значение")
 
     top_interests = report.interest_clusters[:6]
     interest_labels = [item.label for item in reversed(top_interests)]
     interest_values = [round(item.share * 100, 1) for item in reversed(top_interests)]
     ax_interests.barh(interest_labels, interest_values, color="#3a7d44")
-    ax_interests.set_title("Интересы аудитории", fontsize=15, fontweight="bold", loc="left")
+    ax_interests.set_title("Интересы по контенту", fontsize=15, fontweight="bold", loc="left")
     ax_interests.set_xlabel("Доля, %")
 
     ax_summary.axis("off")
@@ -54,7 +56,6 @@ def build_audience_dashboard(report: TelegramAudienceReport) -> bytes:
         f"Сообщений в выборке: {report.source.message_sample_size}",
         "",
         f"Доминирующая тема: {report.dominant_theme.label}",
-        f"Топ-сегмент: {report.top_active_segment.label}",
         f"Просмотры/post: {report.engagement_metrics.average_views}",
         f"ERR: {report.engagement_metrics.deep_engagement_rate:.2%}",
         f"Постов в день: {report.engagement_metrics.posts_per_day:.1f}",
@@ -93,7 +94,7 @@ def build_competitors_dashboard(report: CompetitorDiscoveryReport) -> bytes:
     grid = fig.add_gridspec(2, 2, hspace=0.28, wspace=0.18)
 
     ax_scores = fig.add_subplot(grid[0, 0], facecolor="#fbfdff")
-    ax_components = fig.add_subplot(grid[0, 1], facecolor="#fbfdff")
+    ax_types = fig.add_subplot(grid[0, 1], facecolor="#fbfdff")
     ax_reasons = fig.add_subplot(grid[1, 0], facecolor="#fbfdff")
     ax_meta = fig.add_subplot(grid[1, 1], facecolor="#fbfdff")
 
@@ -110,23 +111,12 @@ def build_competitors_dashboard(report: CompetitorDiscoveryReport) -> bytes:
     ax_scores.set_title("Итоговая похожесть", fontsize=15, fontweight="bold", loc="left")
     ax_scores.set_xlabel("Score, %")
 
-    component_names = ["Темы", "Аудитория", "Вовлеч.", "Формат"]
-    for index, item in enumerate(competitors[:4]):
-        ax_components.plot(
-            component_names,
-            [
-                item.theme_similarity * 100,
-                item.audience_similarity * 100,
-                item.engagement_similarity * 100,
-                item.format_similarity * 100,
-            ],
-            marker="o",
-            linewidth=2.2,
-            label=(item.source.title or item.source.username or f"Кандидат {index + 1}")[:28],
-        )
-    ax_components.set_ylim(0, 100)
-    ax_components.set_title("Из чего состоит совпадение", fontsize=15, fontweight="bold", loc="left")
-    ax_components.legend(loc="lower left", fontsize=9)
+    ax_types.axis("off")
+    type_lines: list[str] = ["Тип конкурента", ""]
+    for item in competitors[:5]:
+        title = item.source.title or item.source.username or item.source.source
+        type_lines.append(f"{title}: {item.relation_type}")
+    ax_types.text(0.03, 0.97, "\n".join(type_lines), va="top", ha="left", fontsize=11, color="#222222", wrap=True)
 
     ax_reasons.axis("off")
     reason_lines: list[str] = ["Почему кандидаты попали в список", ""]
@@ -134,6 +124,8 @@ def build_competitors_dashboard(report: CompetitorDiscoveryReport) -> bytes:
         title = item.source.title or item.source.username or item.source.source
         reason_lines.append(f"{title} [{item.relation_type}]")
         reason_lines.append(f"Темы: {', '.join(item.matched_themes[:3]) or 'нет явных'}")
+        if item.matched_keywords:
+            reason_lines.append(f"Сигналы контента: {', '.join(item.matched_keywords[:3])}")
         if item.disqualifiers:
             reason_lines.append(f"Ограничения: {', '.join(item.disqualifiers[:2])}")
         reason_lines.append("")

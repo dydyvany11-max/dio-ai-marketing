@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import time
 import uuid
@@ -18,8 +19,16 @@ from src.api.services.dto import (
     ContentInsights,
     TelegramAudienceReport,
 )
+from src.api.services.errors import AIEnhancementError
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+logger = logging.getLogger(__name__)
+
+MAX_MESSAGE_SAMPLES = 8
+MAX_MESSAGE_CHARS = 600
+MAX_THEME_EVIDENCE = 3
+MAX_CLUSTER_NOTES = 3
 
 
 class AITheme(BaseModel):
@@ -59,101 +68,154 @@ class GigaChatAudienceEnhancer:
         self._token_expires_at: float = 0.0
 
     def enhance(self, report: TelegramAudienceReport) -> TelegramAudienceReport:
-        prompt = self._build_prompt(report)
-        content = self._chat(prompt)
-        json_text = self._extract_json(content)
-        insights = AIAudienceInsights.model_validate_json(json_text)
-        return self._merge(report, insights)
+        attempts = [
+            self._build_prompt(report, compact=False),
+            self._build_prompt(report, compact=True),
+        ]
+
+        first_error: Exception | None = None
+        first_content = ""
+
+        for index, prompt in enumerate(attempts):
+            content = self._chat(prompt)
+            if index == 0:
+                first_content = content
+            try:
+                insights = self._parse_insights(content)
+                return self._merge(report, insights)
+            except Exception as exc:
+                if first_error is None:
+                    first_error = exc
+                logger.warning(
+                    "GigaChat returned non-JSON or invalid JSON on attempt %s: %s",
+                    index + 1,
+                    exc,
+                )
+
+        repaired_content = self._repair_response(first_content, report)
+        try:
+            insights = self._parse_insights(repaired_content)
+            return self._merge(report, insights)
+        except Exception as second_error:
+            snippet = self._safe_snippet(first_content)
+            raise AIEnhancementError(
+                f"GigaChat вернул ответ в неподходящем формате. "
+                f"Первая ошибка: {first_error}. Вторая ошибка: {second_error}. "
+                f"Фрагмент ответа: {snippet}"
+            ) from second_error
 
     def validate_connection(self) -> None:
         self._get_access_token()
 
-    def _build_prompt(self, report: TelegramAudienceReport) -> str:
-        schema = AIAudienceInsights.model_json_schema()
-        payload = self._report_to_payload(report)
+    def _build_prompt(self, report: TelegramAudienceReport, *, compact: bool) -> str:
+        payload = self._report_to_payload(report, compact=compact)
         return (
-            "Ты анализируешь Telegram-канал или группу.\n"
-            "Ниже уже собраны фактические метрики и кластеры. "
-            "Твоя задача: построить только смысловую интерпретацию, портрет аудитории, тематику и рекомендации.\n\n"
-            "Правила:\n"
-            "1. Не выдумывай числовые метрики.\n"
-            "2. Опирайся только на переданные данные.\n"
-            "3. Верни строго JSON без markdown.\n"
-            "4. Пиши на русском языке.\n\n"
-            f"JSON schema:\n{json.dumps(schema, ensure_ascii=False)}\n\n"
-            f"Данные анализа:\n{json.dumps(payload, ensure_ascii=False)}"
+            "Сформируй результат анализа Telegram-канала.\n"
+            "Ответ ДОЛЖЕН быть только одним JSON-объектом.\n"
+            "Нельзя писать markdown, пояснения, дисклеймеры, вводные фразы и текст до или после JSON.\n"
+            "Нельзя писать фразы вроде 'Как и любая языковая модель'.\n"
+            "Пиши только на русском языке.\n"
+            "Если данных мало, заполни поля осторожно, но JSON все равно верни.\n"
+            "Не придумывай числа и характеристики подписчиков, которых нет в данных.\n"
+            "Целевую аудиторию выводи только из постов, тем и метрик постов.\n\n"
+            "Верни JSON ровно такой структуры:\n"
+            "{\n"
+            '  "dominant_theme": {"key": "string", "label": "string", "share": 0.0, "evidence": ["string"]},\n'
+            '  "channel_themes": [{"key": "string", "label": "string", "share": 0.0, "evidence": ["string"]}],\n'
+            '  "audience_persona": {\n'
+            '    "title": "string",\n'
+            '    "description": "string",\n'
+            '    "motivations": ["string"],\n'
+            '    "content_preferences": ["string"],\n'
+            '    "activity_pattern": "string"\n'
+            "  },\n"
+            '  "content_insights": {\n'
+            '    "channel_format": "string",\n'
+            '    "strongest_content_hook": "string",\n'
+            '    "posting_recommendations": ["string"],\n'
+            '    "best_for_growth": ["string"]\n'
+            "  },\n"
+            '  "summary": "string"\n'
+            "}\n\n"
+            f"Данные для анализа:\n{json.dumps(payload, ensure_ascii=False)}"
         )
 
-    @staticmethod
-    def _report_to_payload(report: TelegramAudienceReport) -> dict[str, Any]:
+    def _report_to_payload(self, report: TelegramAudienceReport, *, compact: bool) -> dict[str, Any]:
+        message_limit = 5 if compact else MAX_MESSAGE_SAMPLES
+        sample_limit = 320 if compact else MAX_MESSAGE_CHARS
+        theme_limit = 3 if compact else 5
+        cluster_limit = 3 if compact else 5
+
         return {
             "source": {
-                "source": report.source.source,
                 "title": report.source.title,
-                "entity_id": report.source.entity_id,
                 "entity_type": report.source.entity_type,
                 "username": report.source.username,
                 "participants_estimate": report.source.participants_estimate,
+                "message_sample_size": report.source.message_sample_size,
             },
-            "activity_clusters": [
-                {
-                    "label": cluster.label,
-                    "count": cluster.count,
-                    "share": cluster.share,
-                    "confidence": cluster.confidence,
-                    "notes": cluster.notes,
-                }
-                for cluster in report.activity_clusters
-            ],
-            "age_hypothesis_clusters": [
-                {
-                    "label": cluster.label,
-                    "count": cluster.count,
-                    "share": cluster.share,
-                    "confidence": cluster.confidence,
-                    "notes": cluster.notes,
-                }
-                for cluster in report.age_hypothesis_clusters
+            "message_samples": [
+                self._truncate_text(text, sample_limit)
+                for text in report.message_samples[:message_limit]
+                if text.strip()
             ],
             "interest_clusters": [
                 {
+                    "key": cluster.key,
                     "label": cluster.label,
-                    "count": cluster.count,
                     "share": cluster.share,
-                    "confidence": cluster.confidence,
-                    "notes": cluster.notes,
+                    "notes": [
+                        self._truncate_text(note, 120)
+                        for note in cluster.notes[:MAX_CLUSTER_NOTES]
+                    ],
                 }
-                for cluster in report.interest_clusters
+                for cluster in report.interest_clusters[:cluster_limit]
             ],
-            "audience_segments": [
-                {
-                    "label": cluster.label,
-                    "count": cluster.count,
-                    "share": cluster.share,
-                    "confidence": cluster.confidence,
-                    "notes": cluster.notes,
-                }
-                for cluster in report.audience_segments
-            ],
-            "top_active_segment": {
-                "label": report.top_active_segment.label,
-                "count": report.top_active_segment.count,
-                "share": report.top_active_segment.share,
-                "confidence": report.top_active_segment.confidence,
-                "notes": report.top_active_segment.notes,
+            "dominant_theme": {
+                "key": report.dominant_theme.key,
+                "label": report.dominant_theme.label,
+                "share": report.dominant_theme.share,
+                "evidence": [
+                    self._truncate_text(item, 120)
+                    for item in report.dominant_theme.evidence[:MAX_THEME_EVIDENCE]
+                ],
             },
-            "dominant_theme": report.dominant_theme.__dict__,
-            "channel_themes": [theme.__dict__ for theme in report.channel_themes],
-            "engagement_metrics": report.engagement_metrics.__dict__,
-            "limitations": report.limitations,
+            "channel_themes": [
+                {
+                    "key": theme.key,
+                    "label": theme.label,
+                    "share": theme.share,
+                    "evidence": [
+                        self._truncate_text(item, 120)
+                        for item in theme.evidence[:MAX_THEME_EVIDENCE]
+                    ],
+                }
+                for theme in report.channel_themes[:theme_limit]
+            ],
+            "engagement_metrics": {
+                "average_views": report.engagement_metrics.average_views,
+                "average_forwards": report.engagement_metrics.average_forwards,
+                "average_reactions": report.engagement_metrics.average_reactions,
+                "posts_per_day": report.engagement_metrics.posts_per_day,
+            },
+            "limitations": report.limitations[:2],
         }
 
     def _chat(self, prompt: str) -> str:
         token = self._get_access_token()
         payload = {
             "model": self._settings.model,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.2,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "Ты возвращаешь только JSON без пояснений, дисклеймеров и markdown. "
+                        "Любой ответ вне JSON запрещен."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0.05,
         }
         headers = {
             "Authorization": f"Bearer {token}",
@@ -178,7 +240,7 @@ class GigaChatAudienceEnhancer:
 
         raw_key = (self._settings.authorization_key or "").strip()
         if not raw_key:
-            raise ValueError("Не задан GIGACHAT_AUTH_KEY")
+            raise AIEnhancementError("Не задан GIGACHAT_AUTH_KEY")
 
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -199,7 +261,7 @@ class GigaChatAudienceEnhancer:
 
         token = data.get("access_token")
         if not token:
-            raise ValueError(f"GigaChat OAuth не вернул access_token: {data}")
+            raise AIEnhancementError(f"GigaChat OAuth не вернул access_token: {data}")
 
         expires_at = data.get("expires_at")
         if isinstance(expires_at, (int, float)):
@@ -213,18 +275,89 @@ class GigaChatAudienceEnhancer:
         self._access_token = token
         return token
 
+    def _repair_response(self, bad_content: str, report: TelegramAudienceReport) -> str:
+        payload = self._report_to_payload(report, compact=True)
+        repair_prompt = (
+            "Нужно вернуть только валидный JSON-объект по данным анализа.\n"
+            "Запрещены любые пояснения, markdown и дисклеймеры.\n"
+            "Если предыдущий ответ был плохим, игнорируй его содержание и просто верни корректный JSON.\n"
+            "Пиши по-русски.\n\n"
+            "Структура JSON:\n"
+            "{\n"
+            '  "dominant_theme": {"key": "string", "label": "string", "share": 0.0, "evidence": ["string"]},\n'
+            '  "channel_themes": [{"key": "string", "label": "string", "share": 0.0, "evidence": ["string"]}],\n'
+            '  "audience_persona": {"title": "string", "description": "string", "motivations": ["string"], "content_preferences": ["string"], "activity_pattern": "string"},\n'
+            '  "content_insights": {"channel_format": "string", "strongest_content_hook": "string", "posting_recommendations": ["string"], "best_for_growth": ["string"]},\n'
+            '  "summary": "string"\n'
+            "}\n\n"
+            f"Данные анализа:\n{json.dumps(payload, ensure_ascii=False)}\n\n"
+            f"Плохой предыдущий ответ:\n{self._truncate_text(bad_content, 800)}"
+        )
+        return self._chat(repair_prompt)
+
+    def _parse_insights(self, content: str) -> AIAudienceInsights:
+        json_text = self._extract_json(content)
+        return AIAudienceInsights.model_validate_json(json_text)
+
     @staticmethod
     def _extract_json(content: str) -> str:
-        cleaned = (content or "").strip()
+        cleaned = (content or "").strip().replace("\ufeff", "")
         cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
         cleaned = re.sub(r"\s*```$", "", cleaned)
+
+        try:
+            json.loads(cleaned)
+            return cleaned
+        except Exception:
+            pass
+
         start = cleaned.find("{")
-        end = cleaned.rfind("}")
-        if start == -1 or end == -1 or end <= start:
+        if start == -1:
             raise ValueError("GigaChat не вернул JSON")
-        cleaned = cleaned[start : end + 1]
-        cleaned = re.sub(r",\s*([\]}])", r"\1", cleaned)
-        return cleaned
+
+        depth = 0
+        in_string = False
+        escape = False
+        end = -1
+        for index, char in enumerate(cleaned[start:], start=start):
+            if in_string:
+                if escape:
+                    escape = False
+                elif char == "\\":
+                    escape = True
+                elif char == '"':
+                    in_string = False
+                continue
+
+            if char == '"':
+                in_string = True
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    end = index
+                    break
+
+        if end == -1:
+            raise ValueError("GigaChat не вернул завершённый JSON-объект")
+
+        candidate = cleaned[start : end + 1]
+        candidate = re.sub(r",\s*([\]}])", r"\1", candidate)
+        json.loads(candidate)
+        return candidate
+
+    @staticmethod
+    def _safe_snippet(content: str, limit: int = 300) -> str:
+        text = re.sub(r"\s+", " ", (content or "").strip())
+        return text[:limit]
+
+    @staticmethod
+    def _truncate_text(text: str, limit: int) -> str:
+        normalized = re.sub(r"\s+", " ", (text or "").strip())
+        if len(normalized) <= limit:
+            return normalized
+        return normalized[: limit - 1].rstrip() + "…"
 
     @staticmethod
     def _merge(report: TelegramAudienceReport, insights: AIAudienceInsights) -> TelegramAudienceReport:

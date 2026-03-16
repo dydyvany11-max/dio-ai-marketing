@@ -43,7 +43,6 @@ class AudienceSource:
     entity_type: str
     username: str | None
     participants_estimate: int | None
-    participant_sample_size: int
     message_sample_size: int
 
 
@@ -89,11 +88,8 @@ class TelegramAudienceReport:
     ai_enhanced: bool
     ai_message: str | None
     source: AudienceSource
-    activity_clusters: list[AudienceCluster]
-    age_hypothesis_clusters: list[AudienceCluster]
+    message_samples: list[str]
     interest_clusters: list[AudienceCluster]
-    audience_segments: list[AudienceCluster]
-    top_active_segment: AudienceCluster
     dominant_theme: ChannelTheme
     channel_themes: list[ChannelTheme]
     audience_persona: AudiencePersona
@@ -108,14 +104,11 @@ class CompetitorMatch:
     source: AudienceSource
     similarity_score: float
     relation_type: str
-    theme_similarity: float
     audience_similarity: float
     engagement_similarity: float
     format_similarity: float
     shared_theme_count: int
     shared_specific_theme_count: int
-    generic_overlap_count: int
-    niche_overlap_score: float
     dominant_specific_theme: str | None
     candidate_dominant_specific_theme: str | None
     matched_themes: list[str]

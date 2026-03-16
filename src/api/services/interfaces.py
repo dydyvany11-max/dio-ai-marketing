@@ -34,7 +34,6 @@ class AudienceAnalyzerPort(Protocol):
     async def analyze(
         self,
         source: str,
-        participant_limit: int = 200,
         message_limit: int = 100,
     ) -> TelegramAudienceReport:
         ...
@@ -43,7 +42,6 @@ class AudienceAnalyzerPort(Protocol):
         self,
         source: str,
         candidate_sources: list[str],
-        participant_limit: int = 200,
         message_limit: int = 100,
         top_k: int = 5,
     ) -> CompetitorDiscoveryReport:

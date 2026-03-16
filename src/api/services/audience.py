@@ -1,25 +1,15 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import logging
 import re
 from collections import Counter
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from statistics import mean, median
-from typing import Iterable
 from urllib.parse import urlparse
 
 from telethon.tl.functions.channels import GetFullChannelRequest
 from telethon.tl.functions.messages import GetFullChatRequest
-from telethon.tl.types import (
-    Channel,
-    Chat,
-    User,
-    UserStatusLastMonth,
-    UserStatusLastWeek,
-    UserStatusOffline,
-    UserStatusOnline,
-    UserStatusRecently,
-)
+from telethon.tl.types import Channel, Chat
 
 from src.api.services.dto import (
     AudienceCluster,
@@ -40,16 +30,8 @@ from src.api.services.audience_presenters import (
     translate_source,
     translate_theme,
 )
-from src.api.services.audience_constants import (
-    AGE_BUCKETS,
-    GENERIC_THEME_KEYS,
-    PROFILE_AGE_SIGNAL_PATTERNS,
-    AGE_SIGNAL_WEIGHTS,
-    INTEREST_PATTERNS,
-    STOPWORDS,
-    THEME_LABELS,
-)
-from src.api.services.errors import AuthorizationRequiredError, TelegramOperationError
+from src.api.services.audience_constants import GENERIC_THEME_KEYS, INTEREST_PATTERNS, STOPWORDS, THEME_LABELS
+from src.api.services.errors import AIEnhancementError, AuthorizationRequiredError, TelegramOperationError
 from src.api.services.telegram_client import TelegramClientService
 
 logger = logging.getLogger(__name__)
@@ -80,7 +62,6 @@ class TelegramAudienceAnalyzer:
     async def analyze(
         self,
         source: str,
-        participant_limit: int = 200,
         message_limit: int = 100,
     ) -> TelegramAudienceReport:
         await self._client_service.ensure_connected()
@@ -91,35 +72,14 @@ class TelegramAudienceAnalyzer:
 
         entity = await self._resolve_entity(source)
         participants_estimate = await self._get_participants_estimate(entity)
-        participants, participant_warnings = await self._collect_participants(
-            entity,
-            participant_limit,
-        )
         messages = await self._collect_messages(entity, message_limit)
         texts = [message.text for message in messages]
+        message_samples = [message.text.strip() for message in messages if message.text.strip()][:20]
 
         interest_clusters, category_scores, theme_evidence = self._build_interest_clusters(texts)
-        if participants:
-            activity_clusters = self._build_activity_clusters(participants)
-            age_hypothesis_clusters = self._build_age_clusters(participants, category_scores, messages)
-            audience_segments = self._build_audience_segments(participants)
-        else:
-            activity_clusters = self._build_channel_activity_clusters(
-                messages,
-                participants_estimate,
-            )
-            age_hypothesis_clusters = self._build_channel_age_clusters(
-                category_scores,
-                messages,
-                participants_estimate,
-            )
-            audience_segments = self._build_channel_audience_segments(
-                activity_clusters,
-                participants_estimate,
-            )
         channel_themes = self._build_channel_themes(category_scores, theme_evidence)
         dominant_theme = channel_themes[0] if channel_themes else ChannelTheme(
-            key="не_определено",
+            key="not_determined",
             label="тема не определена",
             share=0.0,
             evidence=["недостаточно контентных сигналов"],
@@ -131,15 +91,11 @@ class TelegramAudienceAnalyzer:
             entity_type=self._entity_type(entity),
             username=getattr(entity, "username", None),
             participants_estimate=participants_estimate,
-            participant_sample_size=len(participants),
             message_sample_size=len(messages),
         )
-        top_active_segment = max(audience_segments, key=lambda cluster: cluster.share)
         engagement_metrics = self._build_engagement_metrics(messages, participants_estimate)
         audience_persona = self._build_audience_persona(
             source_info,
-            top_active_segment,
-            age_hypothesis_clusters,
             interest_clusters,
             dominant_theme,
             messages,
@@ -150,38 +106,25 @@ class TelegramAudienceAnalyzer:
         )
         summary = build_summary(
             source_info=source_info,
-            activity_clusters=activity_clusters,
-            age_hypothesis_clusters=age_hypothesis_clusters,
             interest_clusters=interest_clusters,
         )
         if self._ai_enhancer is None:
-            ai_message = "AI-слой не подключен, поэтому смысловые выводы собраны базовой моделью."
+            ai_message = "AI-слой не подключен, поэтому портрет аудитории собран локально по контенту канала."
         else:
-            ai_message = "Фактические метрики собраны. Смысловой портрет и рекомендации должен достроить GigaChat."
+            ai_message = "Метрики постов собраны. GigaChat достраивает портрет целевой аудитории и рекомендации."
 
         limitations = [
-            "Telegram API не отдает точный возраст и точные интересы пользователей.",
+            "Портрет аудитории строится по содержанию последних постов и метрикам постов, а не по данным профилей подписчиков.",
+            "Telegram API не даёт надёжных характеристик подписчиков, поэтому пользовательские эвристики отключены.",
             "Кластеры интересов выводятся по содержанию последних сообщений канала или чата.",
         ]
-        if participants:
-            limitations.append(
-                "Возрастные кластеры здесь являются гипотезой по косвенным сигналам профилей участников и тематике канала."
-            )
-        else:
-            limitations.append(
-                "Для каналов без доступа к подписчикам возрастная гипотеза и активность оцениваются по вовлеченности и контентным сигналам."
-            )
-        limitations.extend(participant_warnings)
 
         report = TelegramAudienceReport(
             ai_enhanced=False,
             ai_message=ai_message,
             source=translate_source(source_info),
-            activity_clusters=[translate_cluster(cluster) for cluster in activity_clusters],
-            age_hypothesis_clusters=[translate_cluster(cluster) for cluster in age_hypothesis_clusters],
+            message_samples=message_samples,
             interest_clusters=[translate_cluster(cluster) for cluster in interest_clusters],
-            audience_segments=[translate_cluster(cluster) for cluster in audience_segments],
-            top_active_segment=translate_cluster(top_active_segment),
             dominant_theme=translate_theme(dominant_theme),
             channel_themes=[translate_theme(theme) for theme in channel_themes],
             audience_persona=audience_persona,
@@ -194,38 +137,22 @@ class TelegramAudienceAnalyzer:
             return report
         try:
             return self._ai_enhancer.enhance(report)
+        except AIEnhancementError:
+            raise
         except Exception as exc:
             logger.warning("GigaChat audience enhancement failed: %s", exc)
-            return TelegramAudienceReport(
-                ai_enhanced=False,
-                ai_message=f"GigaChat не смог улучшить анализ: {exc}",
-                source=report.source,
-                activity_clusters=report.activity_clusters,
-                age_hypothesis_clusters=report.age_hypothesis_clusters,
-                interest_clusters=report.interest_clusters,
-                audience_segments=report.audience_segments,
-                top_active_segment=report.top_active_segment,
-                dominant_theme=report.dominant_theme,
-                channel_themes=report.channel_themes,
-                audience_persona=report.audience_persona,
-                engagement_metrics=report.engagement_metrics,
-                content_insights=report.content_insights,
-                summary=report.summary,
-                limitations=report.limitations,
-            )
+            raise AIEnhancementError(str(exc)) from exc
 
     async def compare_competitors(
         self,
         source: str,
         candidate_sources: list[str],
-        participant_limit: int = 200,
         message_limit: int = 100,
         top_k: int = 5,
     ) -> CompetitorDiscoveryReport:
         raw_analyzer = TelegramAudienceAnalyzer(self._client_service, ai_enhancer=None)
         base_report = await raw_analyzer.analyze(
             source=source,
-            participant_limit=participant_limit,
             message_limit=message_limit,
         )
 
@@ -243,7 +170,6 @@ class TelegramAudienceAnalyzer:
             try:
                 candidate_report = await raw_analyzer.analyze(
                     source=candidate_source,
-                    participant_limit=participant_limit,
                     message_limit=message_limit,
                 )
                 matches.append(self._build_competitor_match(base_report, candidate_report))
@@ -329,24 +255,6 @@ class TelegramAudienceAnalyzer:
             return getattr(entity, "participants_count", None)
         return getattr(entity, "participants_count", None)
 
-    async def _collect_participants(self, entity, limit: int) -> tuple[list[User], list[str]]:
-        users: list[User] = []
-        warnings: list[str] = []
-
-        try:
-            async for participant in self._client_service.client.iter_participants(
-                entity,
-                limit=limit,
-            ):
-                if isinstance(participant, User):
-                    users.append(participant)
-        except Exception as exc:
-            warnings.append(
-                "Выборка участников неполная, потому что Telegram ограничил доступ к списку подписчиков или требует права администратора."
-            )
-
-        return users, warnings
-
     async def _collect_messages(self, entity, limit: int) -> list[_MessageStats]:
         messages: list[_MessageStats] = []
         try:
@@ -378,114 +286,6 @@ class TelegramAudienceAnalyzer:
                 f"Failed to collect recent messages: {exc}"
             ) from exc
         return messages
-
-    def _build_activity_clusters(self, users: Iterable[User]) -> list[AudienceCluster]:
-        counters = Counter()
-        for user in users:
-            counters[self._activity_bucket(user)] += 1
-
-        labels = {
-            "high": "Высокая активность",
-            "medium": "Средняя активность",
-            "low": "Низкая активность",
-            "unknown": "Активность не видна",
-            "unavailable": "Недостаточно данных",
-        }
-        notes = {
-            "high": ["онлайн, недавно онлайн или был в сети не более 3 дней назад"],
-            "medium": ["был онлайн на этой неделе или в последние 30 дней"],
-            "low": ["был онлайн больше 30 дней назад"],
-            "unknown": ["статус последнего посещения скрыт"],
-            "unavailable": ["выборка участников недоступна"],
-        }
-        return self._clusters_from_counter(counters, labels, "unavailable", notes, "high")
-
-    def _build_age_clusters(
-        self,
-        users: Iterable[User],
-        category_scores: Counter,
-        messages: list[_MessageStats],
-    ) -> list[AudienceCluster]:
-        user_list = list(users)
-        sample_size = len(user_list)
-        if sample_size == 0:
-            return [
-                AudienceCluster(
-                    key="unknown",
-                    label="Недостаточно сигналов",
-                    count=0,
-                    share=0.0,
-                    confidence="low",
-                    notes=["возрастная гипотеза не строится без доступной выборки участников"],
-                )
-            ]
-
-        profile_scores = Counter()
-        unknown_count = 0
-        direct_year_hits = 0
-        for user in user_list:
-            age_scores, has_direct_year = self._age_signal_scores(user)
-            if has_direct_year:
-                direct_year_hits += 1
-            if age_scores:
-                profile_scores.update(age_scores)
-            else:
-                unknown_count += 1
-
-        prior_scores = self._build_age_prior_scores(category_scores, messages)
-        blend_weight = max(sample_size * 0.08, 1.0)
-        for bucket, score in prior_scores.items():
-            profile_scores[bucket] += score * blend_weight
-
-        known_total = sum(profile_scores.values())
-        unknown_share = unknown_count / sample_size
-        if known_total <= 0:
-            return [
-                AudienceCluster(
-                    key="unknown",
-                    label="Недостаточно сигналов",
-                    count=sample_size,
-                    share=1.0,
-                    confidence="low",
-                    notes=["не хватило косвенных сигналов профиля и контента для возрастной гипотезы"],
-                )
-            ]
-
-        notes = [
-            "гипотеза по косвенным сигналам профиля, username и тематике канала",
-        ]
-        if direct_year_hits:
-            notes.append(f"у части профилей найден вероятный год рождения: {direct_year_hits}")
-
-        clusters: list[AudienceCluster] = []
-        for bucket, _, _ in AGE_BUCKETS:
-            score = profile_scores.get(bucket, 0.0)
-            if score <= 0:
-                continue
-            share = (score / known_total) * (1.0 - unknown_share)
-            clusters.append(
-                AudienceCluster(
-                    key=bucket,
-                    label=f"Гипотеза {bucket}",
-                    count=int(round(sample_size * share)),
-                    share=round(share, 4),
-                    confidence="low" if direct_year_hits < max(3, sample_size // 10) else "medium",
-                    notes=notes,
-                )
-            )
-
-        if unknown_count > 0:
-            clusters.append(
-                AudienceCluster(
-                    key="unknown",
-                    label="Недостаточно сигналов",
-                    count=unknown_count,
-                    share=round(unknown_share, 4),
-                    confidence="low",
-                    notes=["для этой части выборки гипотеза по возрасту не собралась"],
-                )
-            )
-        return sorted(clusters, key=lambda cluster: cluster.share, reverse=True)
 
     def _build_interest_clusters(self, texts: list[str]) -> tuple[list[AudienceCluster], Counter, dict[str, list[str]]]:
         token_counts = Counter()
@@ -588,42 +388,36 @@ class TelegramAudienceAnalyzer:
     def _build_audience_persona(
         self,
         source_info: AudienceSource,
-        top_active_segment: AudienceCluster,
-        age_hypothesis_clusters: list[AudienceCluster],
         interest_clusters: list[AudienceCluster],
         dominant_theme: ChannelTheme,
         messages: list[_MessageStats],
     ) -> AudiencePersona:
-        top_age = max(age_hypothesis_clusters, key=lambda cluster: cluster.share) if age_hypothesis_clusters else None
         top_interest = max(interest_clusters, key=lambda cluster: cluster.share) if interest_clusters else None
         posting_density = self._posting_density(messages)
         prime_time_share = self._prime_time_share(messages)
 
         if prime_time_share >= 0.5:
-            activity_pattern = "Чаще вовлекается в вечерние часы и регулярно реагирует на свежие публикации."
+            activity_pattern = "Аудитория чаще реагирует в вечерние часы и на свежие публикации."
         elif posting_density >= 12:
-            activity_pattern = "Потребляет контент в течение дня короткими сессиями и хорошо реагирует на частый постинг."
+            activity_pattern = "Аудитория потребляет контент короткими сессиями в течение дня и нормально воспринимает частый постинг."
         else:
-            activity_pattern = "Вовлекается точечно, чаще на сильные или важные публикации."
+            activity_pattern = "Аудитория вовлекается точечно, в основном на сильные или важные публикации."
 
-        age_text = top_age.label if top_age else "без выраженной возрастной гипотезы"
         interest_text = top_interest.label if top_interest else dominant_theme.label
-
         motivations = [
             f"Следить за темой '{dominant_theme.label}' без лишнего шума.",
             f"Получать контент, который совпадает с интересом '{interest_text}'.",
-            "Быстро понимать, что сейчас важно или обсуждаемо.",
+            "Быстро понимать, что сейчас важно и обсуждаемо.",
         ]
         content_preferences = [
-            f"Контент с тематикой '{dominant_theme.label}'.",
-            "Короткие, быстро считываемые публикации с сильным заголовком.",
-            "Посты, которые можно переслать или обсудить.",
+            f"Контент с фокусом на тему '{dominant_theme.label}'.",
+            "Короткие посты с сильным заголовком и быстрым смысловым заходом.",
+            "Публикации, которые легко переслать или обсудить.",
         ]
-        title = f"Ядро аудитории канала {source_info.title}"
+        title = f"Основная аудитория канала {source_info.title}"
         description = (
-            f"Основной пользователь похож на сегмент '{top_active_segment.label}', "
-            f"чаще всего попадает в возрастную гипотезу '{age_text}' и приходит за тематикой "
-            f"'{interest_text}'."
+            f"Вероятная целевая аудитория канала приходит за темой '{interest_text}' "
+            f"и лучше всего реагирует на контент в доминирующем формате '{dominant_theme.label}'."
         )
         return AudiencePersona(
             title=title,
@@ -688,311 +482,6 @@ class TelegramAudienceAnalyzer:
             posting_recommendations=[],
             best_for_growth=[],
         )
-
-    def _build_channel_activity_clusters(
-        self,
-        messages: list[_MessageStats],
-        participants_estimate: int | None,
-    ) -> list[AudienceCluster]:
-        if not messages or not participants_estimate:
-            return [
-                AudienceCluster(
-                    key="unavailable",
-                    label="Недостаточно данных",
-                    count=0,
-                    share=0.0,
-                    confidence="low",
-                    notes=["недостаточно сообщений или нет оценки размера аудитории"],
-                )
-            ]
-
-        avg_views = mean(message.views for message in messages)
-        median_views = median(message.views for message in messages)
-        avg_forwards = mean(message.forwards for message in messages)
-        avg_replies = mean(message.replies for message in messages)
-        avg_reactions = mean(message.reactions for message in messages)
-        view_rate = min(avg_views / participants_estimate, 1.0)
-        deep_engagement = (
-            (avg_forwards + avg_replies + avg_reactions) / avg_views
-            if avg_views else 0.0
-        )
-        posting_density = self._posting_density(messages)
-
-        engaged_share = self._clamp(
-            0.45 * view_rate + 1.8 * deep_engagement + 0.12 * posting_density,
-            0.05,
-            0.55,
-        )
-        warm_share = self._clamp(
-            0.95 * view_rate - 0.55 * engaged_share + 0.08 * posting_density,
-            0.15,
-            0.5,
-        )
-        passive_share = self._clamp(1.0 - engaged_share - warm_share, 0.1, 0.8)
-
-        normalized_total = engaged_share + warm_share + passive_share
-        engaged_share /= normalized_total
-        warm_share /= normalized_total
-        passive_share /= normalized_total
-
-        return [
-            self._estimated_cluster(
-                "high",
-                "Высокая активность",
-                engaged_share,
-                participants_estimate,
-                "medium",
-                [
-                    f"средняя доля просмотров {view_rate:.3f}",
-                    f"медиана просмотров {int(median_views)}",
-                    f"глубокая вовлеченность {deep_engagement:.4f}",
-                ],
-            ),
-            self._estimated_cluster(
-                "medium",
-                "Средняя активность",
-                warm_share,
-                participants_estimate,
-                "medium",
-                [
-                    f"частота публикаций {posting_density:.2f} поста/день",
-                    f"среднее число пересылок {int(avg_forwards)}",
-                ],
-            ),
-            self._estimated_cluster(
-                "low",
-                "Низкая активность",
-                passive_share,
-                participants_estimate,
-                "medium",
-                ["оценка как оставшаяся часть аудитории вне активного ядра"],
-            ),
-        ]
-
-    def _build_channel_age_clusters(
-        self,
-        category_scores: Counter,
-        messages: list[_MessageStats],
-        participants_estimate: int | None,
-    ) -> list[AudienceCluster]:
-        if not participants_estimate:
-            participants_estimate = max(len(messages), 1)
-
-        age_scores = self._build_age_prior_scores(category_scores, messages)
-
-        total = sum(age_scores.values())
-        clusters = []
-        for bucket, _, _ in AGE_BUCKETS:
-            score = age_scores.get(bucket, 0.0)
-            if score <= 0:
-                continue
-            share = score / total
-            clusters.append(
-                self._estimated_cluster(
-                    bucket,
-                    f"Гипотеза {bucket}",
-                    share,
-                    participants_estimate,
-                    "low",
-                    ["гипотеза по тематике контента, длине текстов и времени публикаций"],
-                )
-            )
-        return sorted(clusters, key=lambda cluster: cluster.share, reverse=True)
-
-    def _build_channel_audience_segments(
-        self,
-        activity_clusters: list[AudienceCluster],
-        participants_estimate: int | None,
-    ) -> list[AudienceCluster]:
-        if not participants_estimate:
-            return [
-                AudienceCluster(
-                    key="unavailable",
-                    label="Недостаточно данных",
-                    count=0,
-                    share=0.0,
-                    confidence="low",
-                    notes=["оценка размера аудитории недоступна"],
-                )
-            ]
-
-        activity_map = {cluster.key: cluster for cluster in activity_clusters}
-        core_share = activity_map.get("high").share if activity_map.get("high") else 0.0
-        warm_share = activity_map.get("medium").share if activity_map.get("medium") else 0.0
-        passive_share = activity_map.get("low").share if activity_map.get("low") else 1.0
-        bot_share = self._clamp(0.015 + passive_share * 0.04, 0.01, 0.06)
-        passive_share = max(passive_share - bot_share, 0.0)
-        total = core_share + warm_share + passive_share + bot_share
-        core_share /= total
-        warm_share /= total
-        passive_share /= total
-        bot_share /= total
-
-        return [
-            self._estimated_cluster(
-                "core_active",
-                "Ядро активной аудитории",
-                core_share,
-                participants_estimate,
-                "medium",
-                ["сегмент построен по доле аудитории с высокой вовлеченностью"],
-            ),
-            self._estimated_cluster(
-                "warm_audience",
-                "Тёплая аудитория",
-                warm_share,
-                participants_estimate,
-                "medium",
-                ["сегмент построен по доле аудитории со средней вовлеченностью"],
-            ),
-            self._estimated_cluster(
-                "silent_audience",
-                "Пассивная аудитория",
-                passive_share,
-                participants_estimate,
-                "medium",
-                ["оценка как подписчики с низким взаимодействием с контентом"],
-            ),
-            self._estimated_cluster(
-                "bots",
-                "Боты и сервисные аккаунты",
-                bot_share,
-                participants_estimate,
-                "low",
-                ["эвристическая доля для неактивных и технических аккаунтов"],
-            ),
-        ]
-
-    def _build_audience_segments(self, users: Iterable[User]) -> list[AudienceCluster]:
-        counters = Counter()
-        for user in users:
-            if getattr(user, "bot", False):
-                counters["bots"] += 1
-                continue
-
-            activity = self._activity_bucket(user)
-            if activity == "high":
-                counters["core_active"] += 1
-            elif activity == "medium":
-                counters["warm_audience"] += 1
-            else:
-                counters["silent_audience"] += 1
-
-        labels = {
-            "core_active": "Ядро активной аудитории",
-            "warm_audience": "Тёплая аудитория",
-            "silent_audience": "Пассивная аудитория",
-            "bots": "Боты и сервисные аккаунты",
-            "unavailable": "Недостаточно данных",
-        }
-        notes = {
-            "core_active": ["регулярная недавняя активность"],
-            "warm_audience": ["активность была на неделе или в течение месяца"],
-            "silent_audience": ["давняя активность или скрытый статус"],
-            "bots": ["Telegram пометил аккаунт как bot"],
-            "unavailable": ["выборка участников недоступна"],
-        }
-        return self._clusters_from_counter(counters, labels, "unavailable", notes, "medium")
-
-    def _activity_bucket(self, user: User) -> str:
-        status = getattr(user, "status", None)
-        now = datetime.now(timezone.utc)
-
-        if isinstance(status, (UserStatusOnline, UserStatusRecently)):
-            return "high"
-        if isinstance(status, UserStatusLastWeek):
-            return "medium"
-        if isinstance(status, UserStatusLastMonth):
-            return "low"
-        if isinstance(status, UserStatusOffline):
-            was_online = getattr(status, "was_online", None)
-            if was_online is None:
-                return "unknown"
-            if was_online.tzinfo is None:
-                was_online = was_online.replace(tzinfo=timezone.utc)
-            delta = now - was_online
-            if delta <= timedelta(days=3):
-                return "high"
-            if delta <= timedelta(days=30):
-                return "medium"
-            return "low"
-        return "unknown"
-
-    def _age_bucket(self, user: User) -> str:
-        text = self._profile_text(user)
-
-        year_match = re.search(r"(19[5-9]\d|20[0-1]\d)", text)
-        if not year_match:
-            return "unknown"
-
-        year = int(year_match.group(1))
-        age = datetime.now().year - year
-        if age < 13 or age > 80:
-            return "unknown"
-
-        for bucket, min_age, max_age in AGE_BUCKETS:
-            if min_age <= age <= max_age:
-                return bucket
-        return "unknown"
-
-    def _age_signal_scores(self, user: User) -> tuple[Counter, bool]:
-        text = self._profile_text(user).lower()
-        scores = Counter()
-        direct_year = False
-
-        bucket = self._age_bucket(user)
-        if bucket != "unknown":
-            scores[bucket] += 4.0
-            direct_year = True
-
-        for age_bucket, patterns in PROFILE_AGE_SIGNAL_PATTERNS.items():
-            for pattern in patterns:
-                if pattern in text:
-                    scores[age_bucket] += 1.0
-
-        if getattr(user, "bot", False):
-            return Counter(), direct_year
-        return scores, direct_year
-
-    @staticmethod
-    def _profile_text(user: User) -> str:
-        return " ".join(
-            part for part in (
-                getattr(user, "username", None),
-                getattr(user, "first_name", None),
-                getattr(user, "last_name", None),
-            )
-            if part
-        )
-
-    @staticmethod
-    def _build_age_prior_scores(category_scores: Counter, messages: list[_MessageStats]) -> Counter:
-        age_scores = Counter()
-        for bucket, weights in AGE_SIGNAL_WEIGHTS.items():
-            for category, multiplier in weights.items():
-                age_scores[bucket] += category_scores.get(category, 0) * multiplier
-
-        avg_text_len = mean(len(message.text) for message in messages) if messages else 0.0
-        if avg_text_len > 350:
-            age_scores["35-44"] += 2.0
-            age_scores["45+"] += 1.0
-        elif avg_text_len > 180:
-            age_scores["25-34"] += 2.0
-            age_scores["35-44"] += 1.0
-        else:
-            age_scores["18-24"] += 1.0
-            age_scores["25-34"] += 0.5
-
-        prime_hours_share = TelegramAudienceAnalyzer._prime_time_share(messages)
-        if prime_hours_share >= 0.55:
-            age_scores["25-34"] += 1.2
-            age_scores["35-44"] += 0.8
-        else:
-            age_scores["18-24"] += 0.8
-
-        if not age_scores:
-            age_scores["25-34"] = 1.0
-        return age_scores
 
     @staticmethod
     def _tokenize(text: str) -> list[str]:
@@ -1118,14 +607,11 @@ class TelegramAudienceAnalyzer:
             base_report.channel_themes,
             candidate_report.channel_themes,
         )
-        audience_similarity = self._cluster_overlap(
-            base_report.audience_segments,
-            candidate_report.audience_segments,
-        )
         interest_similarity = self._cluster_overlap(
             base_report.interest_clusters,
             candidate_report.interest_clusters,
         )
+        audience_similarity = interest_similarity
         engagement_similarity = self._engagement_similarity(
             base_report.engagement_metrics,
             candidate_report.engagement_metrics,
@@ -1221,14 +707,11 @@ class TelegramAudienceAnalyzer:
             source=candidate_report.source,
             similarity_score=round(similarity_score, 4),
             relation_type=relation_type,
-            theme_similarity=round(theme_similarity, 4),
             audience_similarity=round(audience_similarity, 4),
             engagement_similarity=round(engagement_similarity, 4),
             format_similarity=round(format_similarity, 4),
             shared_theme_count=shared_theme_count,
             shared_specific_theme_count=shared_specific_theme_count,
-            generic_overlap_count=generic_overlap_count,
-            niche_overlap_score=round(niche_overlap, 4),
             dominant_specific_theme=dominant_specific_theme,
             candidate_dominant_specific_theme=candidate_dominant_specific_theme,
             matched_themes=matched_themes[:5],

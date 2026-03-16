@@ -8,24 +8,24 @@ from src.api.dependencies import get_audience_analyzer, get_gigachat_status
 from src.api.schemas import (
     AudienceAnalyzeInputResponse,
     AudienceAnalyzeRequest,
+    AudienceClusteringResponse,
     AudienceCompetitorsInputResponse,
     AudienceCompetitorsRequest,
-    AudienceClusteringResponse,
     CompetitorDiscoveryResponse,
     CompetitorFailureResponse,
     CompetitorMatchResponse,
     GigaChatStatusResponse,
     TelegramAudienceReportResponse,
 )
-from src.api.services.errors import (
-    AIEnhancementError,
-    AuthorizationRequiredError,
-    TelegramOperationError,
-)
 from src.api.services.audience_dashboards import (
     build_audience_dashboard,
     build_competitors_dashboard,
     dashboards_available,
+)
+from src.api.services.errors import (
+    AIEnhancementError,
+    AuthorizationRequiredError,
+    TelegramOperationError,
 )
 from src.api.services.interfaces import AudienceAnalyzerPort
 
@@ -37,10 +37,7 @@ logger = logging.getLogger(__name__)
     "/audience/analyze",
     response_model=TelegramAudienceReportResponse,
     summary="Анализ аудитории Telegram-источника",
-    description=(
-        "Принимает ссылку, username или ID канала/группы Telegram и возвращает "
-        "кластеры аудитории по активности, возрастной гипотезе, интересам и итоговым сегментам."
-    ),
+    description="Анализирует последние посты канала или группы и строит портрет целевой аудитории по контенту и метрикам постов.",
 )
 async def analyze_audience(
     payload: AudienceAnalyzeRequest,
@@ -49,14 +46,12 @@ async def analyze_audience(
     try:
         report = await audience_analyzer.analyze(
             source=payload.source,
-            participant_limit=payload.participant_limit,
             message_limit=payload.message_limit,
         )
         status = get_gigachat_status()
         return TelegramAudienceReportResponse(
             input=AudienceAnalyzeInputResponse(
                 source=payload.source,
-                participant_limit=payload.participant_limit,
                 message_limit=payload.message_limit,
             ),
             ai=GigaChatStatusResponse(
@@ -70,16 +65,16 @@ async def analyze_audience(
             ),
             source=report.source,
             clustering=AudienceClusteringResponse(
-                activity_clusters=report.activity_clusters,
-                age_hypothesis_clusters=report.age_hypothesis_clusters,
                 interest_clusters=report.interest_clusters,
-                audience_segments=report.audience_segments,
-                top_active_segment=report.top_active_segment,
                 dominant_theme=report.dominant_theme,
-                channel_themes=report.channel_themes,
             ),
             audience_persona=report.audience_persona,
-            engagement_metrics=report.engagement_metrics,
+            engagement_metrics={
+                "average_views": report.engagement_metrics.average_views,
+                "average_forwards": report.engagement_metrics.average_forwards,
+                "average_reactions": report.engagement_metrics.average_reactions,
+                "posts_per_day": report.engagement_metrics.posts_per_day,
+            },
             content_insights=report.content_insights,
             summary=report.summary,
             limitations=report.limitations,
@@ -98,7 +93,7 @@ async def analyze_audience(
 @router.post(
     "/audience/analyze/dashboard",
     summary="PNG-дашборд по анализу аудитории",
-    description="Строит наглядный PNG-дашборд по отчёту анализа аудитории Telegram-источника.",
+    description="Строит PNG-дашборд по темам, интересам и метрикам постов Telegram-источника.",
 )
 async def analyze_audience_dashboard(
     payload: AudienceAnalyzeRequest,
@@ -110,7 +105,6 @@ async def analyze_audience_dashboard(
     try:
         report = await audience_analyzer.analyze(
             source=payload.source,
-            participant_limit=payload.participant_limit,
             message_limit=payload.message_limit,
         )
         image_bytes = build_audience_dashboard(report)
@@ -134,10 +128,7 @@ async def analyze_audience_dashboard(
     "/audience/competitors",
     response_model=CompetitorDiscoveryResponse,
     summary="Поиск похожих каналов-конкурентов",
-    description=(
-        "Принимает основной Telegram-источник и список кандидатов, "
-        "анализирует их локально и возвращает самые похожие каналы по тематике, аудитории и подаче."
-    ),
+    description="Сравнивает каналы по контенту, темам, формату и вовлечению постов.",
 )
 async def find_audience_competitors(
     payload: AudienceCompetitorsRequest,
@@ -147,7 +138,6 @@ async def find_audience_competitors(
         result = await audience_analyzer.compare_competitors(
             source=payload.source,
             candidate_sources=payload.candidate_sources,
-            participant_limit=payload.participant_limit,
             message_limit=payload.message_limit,
             top_k=payload.top_k,
         )
@@ -155,7 +145,6 @@ async def find_audience_competitors(
             input=AudienceCompetitorsInputResponse(
                 source=payload.source,
                 candidate_sources=payload.candidate_sources,
-                participant_limit=payload.participant_limit,
                 message_limit=payload.message_limit,
                 top_k=payload.top_k,
             ),
@@ -163,22 +152,12 @@ async def find_audience_competitors(
             competitors=[
                 CompetitorMatchResponse(
                     source=item.source,
-                    similarity_score=item.similarity_score,
-                    relation_type=item.relation_type,
-                    theme_similarity=item.theme_similarity,
-                    audience_similarity=item.audience_similarity,
-                    engagement_similarity=item.engagement_similarity,
-                    format_similarity=item.format_similarity,
-                    shared_theme_count=item.shared_theme_count,
-                    shared_specific_theme_count=item.shared_specific_theme_count,
-                    generic_overlap_count=item.generic_overlap_count,
-                    niche_overlap_score=item.niche_overlap_score,
-                    dominant_specific_theme=item.dominant_specific_theme,
-                    candidate_dominant_specific_theme=item.candidate_dominant_specific_theme,
-                    matched_themes=item.matched_themes,
-                    matched_keywords=item.matched_keywords,
-                    disqualifiers=item.disqualifiers,
-                    reason=item.reason,
+                    match_percent=round(item.similarity_score * 100, 1),
+                    competitor_type=item.relation_type,
+                    common_topics=item.matched_themes,
+                    common_content_signals=item.matched_keywords,
+                    why_it_matched=item.reason,
+                    limitations=item.disqualifiers,
                 )
                 for item in result.competitors
             ],
@@ -201,7 +180,7 @@ async def find_audience_competitors(
 @router.post(
     "/audience/competitors/dashboard",
     summary="PNG-дашборд по конкурентам",
-    description="Строит наглядный PNG-дашборд по результату сравнения Telegram-канала с конкурентами.",
+    description="Строит PNG-дашборд по результату сравнения Telegram-канала с конкурентами.",
 )
 async def find_audience_competitors_dashboard(
     payload: AudienceCompetitorsRequest,
@@ -214,7 +193,6 @@ async def find_audience_competitors_dashboard(
         result = await audience_analyzer.compare_competitors(
             source=payload.source,
             candidate_sources=payload.candidate_sources,
-            participant_limit=payload.participant_limit,
             message_limit=payload.message_limit,
             top_k=payload.top_k,
         )
@@ -239,7 +217,7 @@ async def find_audience_competitors_dashboard(
     "/ai/status",
     response_model=GigaChatStatusResponse,
     summary="Статус GigaChat",
-    description="Показывает, настроен ли GigaChat, удалось ли приложению создать AI-клиент и будет ли AI участвовать в анализе.",
+    description="Показывает, настроен ли GigaChat и будет ли AI участвовать в анализе.",
 )
 async def tg_ai_status():
     status = get_gigachat_status()
