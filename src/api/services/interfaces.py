@@ -3,6 +3,7 @@ from typing import Protocol
 from src.api.services.dto import (
     AuthStatus,
     AuthorizedUser,
+    CompetitorDiscoveryReport,
     GigaChatStatus,
     QRCodePayload,
     TelegramAudienceReport,
@@ -36,6 +37,16 @@ class AudienceAnalyzerPort(Protocol):
         participant_limit: int = 200,
         message_limit: int = 100,
     ) -> TelegramAudienceReport:
+        ...
+
+    async def compare_competitors(
+        self,
+        source: str,
+        candidate_sources: list[str],
+        participant_limit: int = 200,
+        message_limit: int = 100,
+        top_k: int = 5,
+    ) -> CompetitorDiscoveryReport:
         ...
 
 

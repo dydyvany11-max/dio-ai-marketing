@@ -90,7 +90,7 @@ class TelegramAudienceReport:
     ai_message: str | None
     source: AudienceSource
     activity_clusters: list[AudienceCluster]
-    age_clusters: list[AudienceCluster]
+    age_hypothesis_clusters: list[AudienceCluster]
     interest_clusters: list[AudienceCluster]
     audience_segments: list[AudienceCluster]
     top_active_segment: AudienceCluster
@@ -101,6 +101,40 @@ class TelegramAudienceReport:
     content_insights: ContentInsights
     summary: str
     limitations: list[str]
+
+
+@dataclass(frozen=True)
+class CompetitorMatch:
+    source: AudienceSource
+    similarity_score: float
+    relation_type: str
+    theme_similarity: float
+    audience_similarity: float
+    engagement_similarity: float
+    format_similarity: float
+    shared_theme_count: int
+    shared_specific_theme_count: int
+    generic_overlap_count: int
+    niche_overlap_score: float
+    dominant_specific_theme: str | None
+    candidate_dominant_specific_theme: str | None
+    matched_themes: list[str]
+    matched_keywords: list[str]
+    disqualifiers: list[str]
+    reason: str
+
+
+@dataclass(frozen=True)
+class CompetitorFailure:
+    source: str
+    error: str
+
+
+@dataclass(frozen=True)
+class CompetitorDiscoveryReport:
+    source: AudienceSource
+    competitors: list[CompetitorMatch]
+    failed_candidates: list[CompetitorFailure]
 
 
 @dataclass(frozen=True)

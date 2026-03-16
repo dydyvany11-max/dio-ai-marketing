@@ -52,11 +52,11 @@ def translate_theme(theme: ChannelTheme) -> ChannelTheme:
 def build_summary(
     source_info: AudienceSource,
     activity_clusters: list[AudienceCluster],
-    age_clusters: list[AudienceCluster],
+    age_hypothesis_clusters: list[AudienceCluster],
     interest_clusters: list[AudienceCluster],
 ) -> str:
     top_activity_cluster = max(activity_clusters, key=lambda cluster: cluster.share) if activity_clusters else None
-    top_age_cluster = max(age_clusters, key=lambda cluster: cluster.share) if age_clusters else None
+    top_age_cluster = max(age_hypothesis_clusters, key=lambda cluster: cluster.share) if age_hypothesis_clusters else None
     top_interest_cluster = max(interest_clusters, key=lambda cluster: cluster.share) if interest_clusters else None
 
     top_activity = top_activity_cluster.label if top_activity_cluster else "нет данных"
@@ -70,5 +70,5 @@ def build_summary(
         top_interest = top_interest_cluster.label
     return (
         f"{source_info.title}: основной сигнал по активности '{top_activity}', "
-        f"по возрасту '{top_age}', по интересам '{top_interest}'."
+        f"по возрастной гипотезе '{top_age}', по интересам '{top_interest}'."
     )

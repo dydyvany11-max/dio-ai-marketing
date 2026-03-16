@@ -105,7 +105,7 @@ class GigaChatAudienceEnhancer:
                 }
                 for cluster in report.activity_clusters
             ],
-            "age_clusters": [
+            "age_hypothesis_clusters": [
                 {
                     "label": cluster.label,
                     "count": cluster.count,
@@ -113,7 +113,7 @@ class GigaChatAudienceEnhancer:
                     "confidence": cluster.confidence,
                     "notes": cluster.notes,
                 }
-                for cluster in report.age_clusters
+                for cluster in report.age_hypothesis_clusters
             ],
             "interest_clusters": [
                 {

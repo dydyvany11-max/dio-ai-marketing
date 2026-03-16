@@ -39,6 +39,59 @@ class AudienceAnalyzeRequest(BaseModel):
     )
 
 
+class AudienceCompetitorsRequest(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "source": "https://t.me/Cbpub",
+                "candidate_sources": [
+                    "https://t.me/mediyca",
+                    "https://t.me/raiznews",
+                    "https://t.me/paritet_development",
+                ],
+                "participant_limit": 200,
+                "message_limit": 100,
+                "top_k": 5,
+            }
+        }
+    )
+
+    source: str = Field(
+        default="https://t.me/Cbpub",
+        description="Ссылка на канал/группу, @username или ID Telegram-источника",
+        examples=["https://t.me/Cbpub", "@Cbpub", "1135818819"],
+    )
+    candidate_sources: list[str] = Field(
+        default=[
+            "https://t.me/mediyca",
+            "https://t.me/raiznews",
+            "https://t.me/paritet_development",
+        ],
+        min_length=1,
+        max_length=30,
+        description="Список каналов-кандидатов, с которыми нужно сравнить основной источник",
+        examples=[["@meduzalive", "@bbbreaking", "@rian_ru"]],
+    )
+    participant_limit: int = Field(
+        default=200,
+        ge=1,
+        le=1000,
+        description="Сколько участников пытаться собрать для внутренней выборки, если Telegram позволяет",
+    )
+    message_limit: int = Field(
+        default=100,
+        ge=1,
+        le=500,
+        description="Сколько последних сообщений анализировать для метрик",
+    )
+    top_k: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Сколько самых похожих кандидатов вернуть в ответе",
+    )
+
+
 class GigaChatStatusResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -60,6 +113,16 @@ class AudienceAnalyzeInputResponse(BaseModel):
     source: str = Field(description="Что было передано в source")
     participant_limit: int = Field(description="Какой лимит участников был запрошен")
     message_limit: int = Field(description="Какой лимит сообщений был запрошен")
+
+
+class AudienceCompetitorsInputResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    source: str = Field(description="Что было передано в source")
+    candidate_sources: list[str] = Field(description="Список кандидатов на сравнение")
+    participant_limit: int = Field(description="Какой лимит участников был запрошен")
+    message_limit: int = Field(description="Какой лимит сообщений был запрошен")
+    top_k: int = Field(description="Сколько лучших совпадений нужно вернуть")
 
 
 class AudienceClusterResponse(BaseModel):
@@ -137,8 +200,8 @@ class AudienceClusteringResponse(BaseModel):
     activity_clusters: list[AudienceClusterResponse] = Field(
         description="Кластеры аудитории по активности"
     )
-    age_clusters: list[AudienceClusterResponse] = Field(
-        description="Кластеры аудитории по возрастным группам"
+    age_hypothesis_clusters: list[AudienceClusterResponse] = Field(
+        description="Гипотеза по возрастным группам аудитории на основе косвенных сигналов"
     )
     interest_clusters: list[AudienceClusterResponse] = Field(
         description="Кластеры аудитории по тематическим интересам"
@@ -183,3 +246,49 @@ class TelegramAudienceReportResponse(BaseModel):
     )
     summary: str = Field(description="Краткая итоговая сводка")
     limitations: list[str] = Field(description="Ограничения и допущения анализа")
+
+
+class CompetitorMatchResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    source: AudienceSourceResponse = Field(description="Информация о похожем канале-кандидате")
+    similarity_score: float = Field(description="Итоговый скор похожести от 0 до 1")
+    relation_type: str = Field(description="Тип совпадения каналов")
+    theme_similarity: float = Field(description="Похожесть по тематике контента")
+    audience_similarity: float = Field(description="Похожесть по структуре аудитории")
+    engagement_similarity: float = Field(description="Похожесть по метрикам вовлечения")
+    format_similarity: float = Field(description="Похожесть по формату и подаче")
+    shared_theme_count: int = Field(description="Общее число пересекающихся тем")
+    shared_specific_theme_count: int = Field(description="Число пересекающихся нишевых тем")
+    generic_overlap_count: int = Field(description="Сколько пересечений пришлось на широкие общие темы")
+    niche_overlap_score: float = Field(description="Сила пересечения именно по нишевым темам")
+    dominant_specific_theme: str | None = Field(default=None, description="Главная нишевая тема исходного канала")
+    candidate_dominant_specific_theme: str | None = Field(default=None, description="Главная нишевая тема канала-кандидата")
+    matched_themes: list[str] = Field(description="Какие темы совпали сильнее всего")
+    matched_keywords: list[str] = Field(description="Какие ключевые сигналы контента пересеклись")
+    disqualifiers: list[str] = Field(description="Почему канал не прошел в более близкую категорию конкурента")
+    reason: str = Field(description="Краткое объяснение, почему канал похож")
+
+
+class CompetitorFailureResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    source: str = Field(description="Кандидат, который не удалось обработать")
+    error: str = Field(description="Причина, по которой кандидат был пропущен")
+
+
+class CompetitorDiscoveryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    input: AudienceCompetitorsInputResponse = Field(
+        description="Входные параметры, с которыми был запущен поиск конкурентов"
+    )
+    source: AudienceSourceResponse = Field(
+        description="Информация об основном анализируемом Telegram-источнике"
+    )
+    competitors: list[CompetitorMatchResponse] = Field(
+        description="Список наиболее похожих каналов из переданных кандидатов"
+    )
+    failed_candidates: list[CompetitorFailureResponse] = Field(
+        description="Кандидаты, которых не удалось проанализировать"
+    )

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import math
 import re
 from collections import Counter
 from datetime import datetime, timedelta, timezone
@@ -24,6 +23,9 @@ from telethon.tl.types import (
 
 from src.api.services.dto import (
     AudienceCluster,
+    CompetitorDiscoveryReport,
+    CompetitorFailure,
+    CompetitorMatch,
     ContentInsights,
     EngagementMetrics,
     AudiencePersona,
@@ -34,11 +36,14 @@ from src.api.services.dto import (
 from src.api.services.audience_presenters import (
     build_summary,
     translate_cluster,
+    translate_key,
     translate_source,
     translate_theme,
 )
 from src.api.services.audience_constants import (
     AGE_BUCKETS,
+    GENERIC_THEME_KEYS,
+    PROFILE_AGE_SIGNAL_PATTERNS,
     AGE_SIGNAL_WEIGHTS,
     INTEREST_PATTERNS,
     STOPWORDS,
@@ -96,14 +101,14 @@ class TelegramAudienceAnalyzer:
         interest_clusters, category_scores, theme_evidence = self._build_interest_clusters(texts)
         if participants:
             activity_clusters = self._build_activity_clusters(participants)
-            age_clusters = self._build_age_clusters(participants)
+            age_hypothesis_clusters = self._build_age_clusters(participants, category_scores, messages)
             audience_segments = self._build_audience_segments(participants)
         else:
             activity_clusters = self._build_channel_activity_clusters(
                 messages,
                 participants_estimate,
             )
-            age_clusters = self._build_channel_age_clusters(
+            age_hypothesis_clusters = self._build_channel_age_clusters(
                 category_scores,
                 messages,
                 participants_estimate,
@@ -131,33 +136,27 @@ class TelegramAudienceAnalyzer:
         )
         top_active_segment = max(audience_segments, key=lambda cluster: cluster.share)
         engagement_metrics = self._build_engagement_metrics(messages, participants_estimate)
+        audience_persona = self._build_audience_persona(
+            source_info,
+            top_active_segment,
+            age_hypothesis_clusters,
+            interest_clusters,
+            dominant_theme,
+            messages,
+        )
+        content_insights = self._build_content_insights(
+            dominant_theme=dominant_theme,
+            engagement_metrics=engagement_metrics,
+        )
+        summary = build_summary(
+            source_info=source_info,
+            activity_clusters=activity_clusters,
+            age_hypothesis_clusters=age_hypothesis_clusters,
+            interest_clusters=interest_clusters,
+        )
         if self._ai_enhancer is None:
-            audience_persona = self._build_audience_persona(
-                source_info,
-                top_active_segment,
-                age_clusters,
-                interest_clusters,
-                dominant_theme,
-                messages,
-            )
-            content_insights = self._build_content_insights(
-                dominant_theme=dominant_theme,
-                top_active_segment=top_active_segment,
-                engagement_metrics=engagement_metrics,
-                channel_themes=channel_themes,
-                messages=messages,
-            )
-            summary = build_summary(
-                source_info=source_info,
-                activity_clusters=activity_clusters,
-                age_clusters=age_clusters,
-                interest_clusters=interest_clusters,
-            )
             ai_message = "AI-слой не подключен, поэтому смысловые выводы собраны базовой моделью."
         else:
-            audience_persona = self._build_ai_pending_persona()
-            content_insights = self._build_ai_pending_content_insights()
-            summary = self._build_ai_pending_summary(source_info)
             ai_message = "Фактические метрики собраны. Смысловой портрет и рекомендации должен достроить GigaChat."
 
         limitations = [
@@ -166,11 +165,11 @@ class TelegramAudienceAnalyzer:
         ]
         if participants:
             limitations.append(
-                "Возрастные кластеры оцениваются по открытым признакам профилей участников из выборки."
+                "Возрастные кластеры здесь являются гипотезой по косвенным сигналам профилей участников и тематике канала."
             )
         else:
             limitations.append(
-                "Для каналов без доступа к подписчикам возраст и активность оцениваются по вовлеченности и контентным сигналам."
+                "Для каналов без доступа к подписчикам возрастная гипотеза и активность оцениваются по вовлеченности и контентным сигналам."
             )
         limitations.extend(participant_warnings)
 
@@ -179,7 +178,7 @@ class TelegramAudienceAnalyzer:
             ai_message=ai_message,
             source=translate_source(source_info),
             activity_clusters=[translate_cluster(cluster) for cluster in activity_clusters],
-            age_clusters=[translate_cluster(cluster) for cluster in age_clusters],
+            age_hypothesis_clusters=[translate_cluster(cluster) for cluster in age_hypothesis_clusters],
             interest_clusters=[translate_cluster(cluster) for cluster in interest_clusters],
             audience_segments=[translate_cluster(cluster) for cluster in audience_segments],
             top_active_segment=translate_cluster(top_active_segment),
@@ -192,51 +191,17 @@ class TelegramAudienceAnalyzer:
             limitations=limitations,
         )
         if self._ai_enhancer is None:
-            return TelegramAudienceReport(
-                ai_enhanced=False,
-                ai_message=ai_message,
-                source=report.source,
-                activity_clusters=report.activity_clusters,
-                age_clusters=report.age_clusters,
-                interest_clusters=report.interest_clusters,
-                audience_segments=report.audience_segments,
-                top_active_segment=report.top_active_segment,
-                dominant_theme=report.dominant_theme,
-                channel_themes=report.channel_themes,
-                audience_persona=self._build_audience_persona(
-                    source_info,
-                    top_active_segment,
-                    age_clusters,
-                    interest_clusters,
-                    dominant_theme,
-                    messages,
-                ),
-                engagement_metrics=report.engagement_metrics,
-                content_insights=self._build_content_insights(
-                    dominant_theme=dominant_theme,
-                    top_active_segment=top_active_segment,
-                    engagement_metrics=engagement_metrics,
-                    channel_themes=channel_themes,
-                    messages=messages,
-                ),
-                summary=build_summary(
-                    source_info=source_info,
-                    activity_clusters=activity_clusters,
-                    age_clusters=age_clusters,
-                    interest_clusters=interest_clusters,
-                ),
-                limitations=report.limitations,
-            )
+            return report
         try:
             return self._ai_enhancer.enhance(report)
         except Exception as exc:
             logger.warning("GigaChat audience enhancement failed: %s", exc)
             return TelegramAudienceReport(
                 ai_enhanced=False,
-                ai_message=f"GigaChat РЅРµ СЃРјРѕРі СѓР»СѓС‡С€РёС‚СЊ Р°РЅР°Р»РёР·: {exc}",
+                ai_message=f"GigaChat не смог улучшить анализ: {exc}",
                 source=report.source,
                 activity_clusters=report.activity_clusters,
-                age_clusters=report.age_clusters,
+                age_hypothesis_clusters=report.age_hypothesis_clusters,
                 interest_clusters=report.interest_clusters,
                 audience_segments=report.audience_segments,
                 top_active_segment=report.top_active_segment,
@@ -248,6 +213,61 @@ class TelegramAudienceAnalyzer:
                 summary=report.summary,
                 limitations=report.limitations,
             )
+
+    async def compare_competitors(
+        self,
+        source: str,
+        candidate_sources: list[str],
+        participant_limit: int = 200,
+        message_limit: int = 100,
+        top_k: int = 5,
+    ) -> CompetitorDiscoveryReport:
+        raw_analyzer = TelegramAudienceAnalyzer(self._client_service, ai_enhancer=None)
+        base_report = await raw_analyzer.analyze(
+            source=source,
+            participant_limit=participant_limit,
+            message_limit=message_limit,
+        )
+
+        base_normalized = self._normalize_source(source)
+        seen_candidates: set[str] = set()
+        matches: list[CompetitorMatch] = []
+        failures: list[CompetitorFailure] = []
+
+        for candidate_source in candidate_sources:
+            normalized_candidate = self._normalize_source(candidate_source)
+            if normalized_candidate == base_normalized or normalized_candidate in seen_candidates:
+                continue
+            seen_candidates.add(normalized_candidate)
+
+            try:
+                candidate_report = await raw_analyzer.analyze(
+                    source=candidate_source,
+                    participant_limit=participant_limit,
+                    message_limit=message_limit,
+                )
+                matches.append(self._build_competitor_match(base_report, candidate_report))
+            except (AuthorizationRequiredError, TelegramOperationError) as exc:
+                failures.append(CompetitorFailure(source=candidate_source, error=str(exc)))
+
+        relation_rank = {
+            "прямой конкурент": 2,
+            "смежный конкурент": 1,
+            "широкий рыночный сосед": 0,
+        }
+        matches = [
+            item for item in matches
+            if self._should_keep_competitor(item)
+        ]
+        matches.sort(
+            key=lambda item: (relation_rank.get(item.relation_type, -1), item.similarity_score),
+            reverse=True,
+        )
+        return CompetitorDiscoveryReport(
+            source=base_report.source,
+            competitors=matches[:top_k],
+            failed_candidates=failures,
+        )
     async def _resolve_entity(self, source: str):
         client = self._client_service.client
         normalized = self._normalize_source(source)
@@ -380,24 +400,92 @@ class TelegramAudienceAnalyzer:
         }
         return self._clusters_from_counter(counters, labels, "unavailable", notes, "high")
 
-    def _build_age_clusters(self, users: Iterable[User]) -> list[AudienceCluster]:
-        counters = Counter()
-        for user in users:
-            counters[self._age_bucket(user)] += 1
+    def _build_age_clusters(
+        self,
+        users: Iterable[User],
+        category_scores: Counter,
+        messages: list[_MessageStats],
+    ) -> list[AudienceCluster]:
+        user_list = list(users)
+        sample_size = len(user_list)
+        if sample_size == 0:
+            return [
+                AudienceCluster(
+                    key="unknown",
+                    label="Недостаточно сигналов",
+                    count=0,
+                    share=0.0,
+                    confidence="low",
+                    notes=["возрастная гипотеза не строится без доступной выборки участников"],
+                )
+            ]
 
-        labels = {
-            "13-17": "13-17",
-            "18-24": "18-24",
-            "25-34": "25-34",
-            "35-44": "35-44",
-            "45+": "45+",
-            "unknown": "Не удалось оценить",
-        }
-        notes = {
-            bucket: ["оценка только по открытым признакам имени и username"]
-            for bucket in labels
-        }
-        return self._clusters_from_counter(counters, labels, "unknown", notes, "low")
+        profile_scores = Counter()
+        unknown_count = 0
+        direct_year_hits = 0
+        for user in user_list:
+            age_scores, has_direct_year = self._age_signal_scores(user)
+            if has_direct_year:
+                direct_year_hits += 1
+            if age_scores:
+                profile_scores.update(age_scores)
+            else:
+                unknown_count += 1
+
+        prior_scores = self._build_age_prior_scores(category_scores, messages)
+        blend_weight = max(sample_size * 0.08, 1.0)
+        for bucket, score in prior_scores.items():
+            profile_scores[bucket] += score * blend_weight
+
+        known_total = sum(profile_scores.values())
+        unknown_share = unknown_count / sample_size
+        if known_total <= 0:
+            return [
+                AudienceCluster(
+                    key="unknown",
+                    label="Недостаточно сигналов",
+                    count=sample_size,
+                    share=1.0,
+                    confidence="low",
+                    notes=["не хватило косвенных сигналов профиля и контента для возрастной гипотезы"],
+                )
+            ]
+
+        notes = [
+            "гипотеза по косвенным сигналам профиля, username и тематике канала",
+        ]
+        if direct_year_hits:
+            notes.append(f"у части профилей найден вероятный год рождения: {direct_year_hits}")
+
+        clusters: list[AudienceCluster] = []
+        for bucket, _, _ in AGE_BUCKETS:
+            score = profile_scores.get(bucket, 0.0)
+            if score <= 0:
+                continue
+            share = (score / known_total) * (1.0 - unknown_share)
+            clusters.append(
+                AudienceCluster(
+                    key=bucket,
+                    label=f"Гипотеза {bucket}",
+                    count=int(round(sample_size * share)),
+                    share=round(share, 4),
+                    confidence="low" if direct_year_hits < max(3, sample_size // 10) else "medium",
+                    notes=notes,
+                )
+            )
+
+        if unknown_count > 0:
+            clusters.append(
+                AudienceCluster(
+                    key="unknown",
+                    label="Недостаточно сигналов",
+                    count=unknown_count,
+                    share=round(unknown_share, 4),
+                    confidence="low",
+                    notes=["для этой части выборки гипотеза по возрасту не собралась"],
+                )
+            )
+        return sorted(clusters, key=lambda cluster: cluster.share, reverse=True)
 
     def _build_interest_clusters(self, texts: list[str]) -> tuple[list[AudienceCluster], Counter, dict[str, list[str]]]:
         token_counts = Counter()
@@ -422,6 +510,13 @@ class TelegramAudienceAnalyzer:
             "news_current": "Новости и актуальная повестка",
             "humor_memes": "Мемы и развлечения",
             "finance_crypto": "Финансы и crypto",
+            "career_jobs": "Карьера и вакансии",
+            "gaming": "Игры и гейминг",
+            "sports_esports": "Спорт и киберспорт",
+            "real_estate": "Недвижимость и девелопмент",
+            "construction": "Строительство и ремонт",
+            "auto_transport": "Авто и транспорт",
+            "medicine_health": "Медицина и здоровье",
         }
 
         if not category_counts:
@@ -467,10 +562,13 @@ class TelegramAudienceAnalyzer:
         adjusted = Counter(category_scores)
         if adjusted.get("news_current", 0) and adjusted.get("technology", 0):
             adjusted["news_current"] += adjusted["technology"] * 0.35
-        if adjusted.get("humor_memes", 0) and adjusted.get("news_current", 0):
-            adjusted["humor_memes"] += adjusted["news_current"] * 0.15
         if adjusted.get("media_lifestyle", 0) and adjusted.get("humor_memes", 0):
             adjusted["humor_memes"] += adjusted["media_lifestyle"] * 0.2
+        specific_keys = [key for key in adjusted if key not in GENERIC_THEME_KEYS and adjusted.get(key, 0) > 0]
+        if specific_keys:
+            adjusted["news_current"] *= 0.52
+            adjusted["media_lifestyle"] *= 0.74
+            adjusted["humor_memes"] *= 0.72
 
         total = sum(adjusted.values()) or 1
         themes = []
@@ -479,7 +577,7 @@ class TelegramAudienceAnalyzer:
                 continue
             themes.append(
                 ChannelTheme(
-                    key=self._translate_key(key),
+                    key=translate_key(key),
                     label=THEME_LABELS.get(key, key),
                     share=round(score / total, 4),
                     evidence=theme_evidence.get(key, ["контентный сигнал канала"]),
@@ -491,12 +589,12 @@ class TelegramAudienceAnalyzer:
         self,
         source_info: AudienceSource,
         top_active_segment: AudienceCluster,
-        age_clusters: list[AudienceCluster],
+        age_hypothesis_clusters: list[AudienceCluster],
         interest_clusters: list[AudienceCluster],
         dominant_theme: ChannelTheme,
         messages: list[_MessageStats],
     ) -> AudiencePersona:
-        top_age = max(age_clusters, key=lambda cluster: cluster.share) if age_clusters else None
+        top_age = max(age_hypothesis_clusters, key=lambda cluster: cluster.share) if age_hypothesis_clusters else None
         top_interest = max(interest_clusters, key=lambda cluster: cluster.share) if interest_clusters else None
         posting_density = self._posting_density(messages)
         prime_time_share = self._prime_time_share(messages)
@@ -508,7 +606,7 @@ class TelegramAudienceAnalyzer:
         else:
             activity_pattern = "Вовлекается точечно, чаще на сильные или важные публикации."
 
-        age_text = top_age.label if top_age else "без выраженного возраста"
+        age_text = top_age.label if top_age else "без выраженной возрастной гипотезы"
         interest_text = top_interest.label if top_interest else dominant_theme.label
 
         motivations = [
@@ -524,7 +622,7 @@ class TelegramAudienceAnalyzer:
         title = f"Ядро аудитории канала {source_info.title}"
         description = (
             f"Основной пользователь похож на сегмент '{top_active_segment.label}', "
-            f"чаще всего относится к возрастной группе '{age_text}' и приходит за тематикой "
+            f"чаще всего попадает в возрастную гипотезу '{age_text}' и приходит за тематикой "
             f"'{interest_text}'."
         )
         return AudiencePersona(
@@ -568,16 +666,12 @@ class TelegramAudienceAnalyzer:
     def _build_content_insights(
         self,
         dominant_theme: ChannelTheme,
-        top_active_segment: AudienceCluster,
         engagement_metrics: EngagementMetrics,
-        channel_themes: list[ChannelTheme],
-        messages: list[_MessageStats],
     ) -> ContentInsights:
-        second_theme = channel_themes[1].label if len(channel_themes) > 1 else dominant_theme.label
         if dominant_theme.label == "новости и актуальная повестка":
-            channel_format = "Новостной канал с быстрым реактивным контентом"
+            channel_format = "Новостной канал"
         elif dominant_theme.label == "мемы и развлекательный контент":
-            channel_format = "Развлекательный канал с мемным ядром"
+            channel_format = "Развлекательный канал"
         else:
             channel_format = f"Контентный канал с фокусом на тему '{dominant_theme.label}'"
 
@@ -588,29 +682,11 @@ class TelegramAudienceAnalyzer:
         else:
             strongest_content_hook = "Лучше всего срабатывают точечные публикации с понятной пользой для аудитории."
 
-        posting_recommendations = [
-            f"Держать в основе тему '{dominant_theme.label}', а второй линией усиливать '{second_theme}'.",
-            "Чаще публиковать короткие посты с сильной первой строкой и понятным тезисом.",
-            f"Опираться на сегмент '{top_active_segment.label}', потому что именно он сейчас формирует основную вовлеченность.",
-        ]
-        if engagement_metrics.posts_per_day >= 20:
-            posting_recommendations.append("Не разгонять частоту публикаций ещё сильнее: лучше повышать качество и пересылаемость постов.")
-        else:
-            posting_recommendations.append("Можно аккуратно увеличить частоту публикаций, если сохранить темп и качество подачи.")
-
-        best_for_growth = [
-            "Посты, которые можно быстро переслать знакомым или в чат.",
-            "Короткие новости, дайджесты и реакции на актуальную повестку.",
-            "Публикации на стыке основной тематики канала и второго по силе интереса аудитории.",
-        ]
-        if any("мем" in theme.label for theme in channel_themes):
-            best_for_growth.append("Лёгкие мемные или ироничные вставки вокруг главной темы канала.")
-
         return ContentInsights(
             channel_format=channel_format,
             strongest_content_hook=strongest_content_hook,
-            posting_recommendations=posting_recommendations,
-            best_for_growth=best_for_growth,
+            posting_recommendations=[],
+            best_for_growth=[],
         )
 
     def _build_channel_activity_clusters(
@@ -702,31 +778,7 @@ class TelegramAudienceAnalyzer:
         if not participants_estimate:
             participants_estimate = max(len(messages), 1)
 
-        age_scores = Counter()
-        for bucket, weights in AGE_SIGNAL_WEIGHTS.items():
-            for category, multiplier in weights.items():
-                age_scores[bucket] += category_scores.get(category, 0) * multiplier
-
-        avg_text_len = mean(len(message.text) for message in messages) if messages else 0.0
-        if avg_text_len > 350:
-            age_scores["35-44"] += 2.0
-            age_scores["45+"] += 1.0
-        elif avg_text_len > 180:
-            age_scores["25-34"] += 2.0
-            age_scores["35-44"] += 1.0
-        else:
-            age_scores["18-24"] += 1.0
-            age_scores["25-34"] += 0.5
-
-        prime_hours_share = self._prime_time_share(messages)
-        if prime_hours_share >= 0.55:
-            age_scores["25-34"] += 1.2
-            age_scores["35-44"] += 0.8
-        else:
-            age_scores["18-24"] += 0.8
-
-        if not age_scores:
-            age_scores["25-34"] = 1.0
+        age_scores = self._build_age_prior_scores(category_scores, messages)
 
         total = sum(age_scores.values())
         clusters = []
@@ -738,11 +790,11 @@ class TelegramAudienceAnalyzer:
             clusters.append(
                 self._estimated_cluster(
                     bucket,
-                    bucket,
+                    f"Гипотеза {bucket}",
                     share,
                     participants_estimate,
                     "low",
-                    ["оценка по тематике контента, длине текстов и времени публикаций"],
+                    ["гипотеза по тематике контента, длине текстов и времени публикаций"],
                 )
             )
         return sorted(clusters, key=lambda cluster: cluster.share, reverse=True)
@@ -867,14 +919,7 @@ class TelegramAudienceAnalyzer:
         return "unknown"
 
     def _age_bucket(self, user: User) -> str:
-        text = " ".join(
-            part for part in (
-                getattr(user, "username", None),
-                getattr(user, "first_name", None),
-                getattr(user, "last_name", None),
-            )
-            if part
-        )
+        text = self._profile_text(user)
 
         year_match = re.search(r"(19[5-9]\d|20[0-1]\d)", text)
         if not year_match:
@@ -889,6 +934,65 @@ class TelegramAudienceAnalyzer:
             if min_age <= age <= max_age:
                 return bucket
         return "unknown"
+
+    def _age_signal_scores(self, user: User) -> tuple[Counter, bool]:
+        text = self._profile_text(user).lower()
+        scores = Counter()
+        direct_year = False
+
+        bucket = self._age_bucket(user)
+        if bucket != "unknown":
+            scores[bucket] += 4.0
+            direct_year = True
+
+        for age_bucket, patterns in PROFILE_AGE_SIGNAL_PATTERNS.items():
+            for pattern in patterns:
+                if pattern in text:
+                    scores[age_bucket] += 1.0
+
+        if getattr(user, "bot", False):
+            return Counter(), direct_year
+        return scores, direct_year
+
+    @staticmethod
+    def _profile_text(user: User) -> str:
+        return " ".join(
+            part for part in (
+                getattr(user, "username", None),
+                getattr(user, "first_name", None),
+                getattr(user, "last_name", None),
+            )
+            if part
+        )
+
+    @staticmethod
+    def _build_age_prior_scores(category_scores: Counter, messages: list[_MessageStats]) -> Counter:
+        age_scores = Counter()
+        for bucket, weights in AGE_SIGNAL_WEIGHTS.items():
+            for category, multiplier in weights.items():
+                age_scores[bucket] += category_scores.get(category, 0) * multiplier
+
+        avg_text_len = mean(len(message.text) for message in messages) if messages else 0.0
+        if avg_text_len > 350:
+            age_scores["35-44"] += 2.0
+            age_scores["45+"] += 1.0
+        elif avg_text_len > 180:
+            age_scores["25-34"] += 2.0
+            age_scores["35-44"] += 1.0
+        else:
+            age_scores["18-24"] += 1.0
+            age_scores["25-34"] += 0.5
+
+        prime_hours_share = TelegramAudienceAnalyzer._prime_time_share(messages)
+        if prime_hours_share >= 0.55:
+            age_scores["25-34"] += 1.2
+            age_scores["35-44"] += 0.8
+        else:
+            age_scores["18-24"] += 0.8
+
+        if not age_scores:
+            age_scores["25-34"] = 1.0
+        return age_scores
 
     @staticmethod
     def _tokenize(text: str) -> list[str]:
@@ -996,3 +1100,371 @@ class TelegramAudienceAnalyzer:
             if part
         ) or "Неизвестно"
 
+    def _build_competitor_match(
+        self,
+        base_report: TelegramAudienceReport,
+        candidate_report: TelegramAudienceReport,
+    ) -> CompetitorMatch:
+        (
+            theme_similarity,
+            matched_themes,
+            matched_specific_themes,
+            matched_generic_themes,
+        ) = self._theme_similarity(
+            base_report.channel_themes,
+            candidate_report.channel_themes,
+        )
+        keyword_similarity, matched_keywords = self._keyword_similarity(
+            base_report.channel_themes,
+            candidate_report.channel_themes,
+        )
+        audience_similarity = self._cluster_overlap(
+            base_report.audience_segments,
+            candidate_report.audience_segments,
+        )
+        interest_similarity = self._cluster_overlap(
+            base_report.interest_clusters,
+            candidate_report.interest_clusters,
+        )
+        engagement_similarity = self._engagement_similarity(
+            base_report.engagement_metrics,
+            candidate_report.engagement_metrics,
+        )
+        format_similarity = self._format_similarity(
+            base_report.content_insights,
+            candidate_report.content_insights,
+        )
+        dominant_theme_bonus = (
+            1.0
+            if (
+                base_report.dominant_theme.key == candidate_report.dominant_theme.key
+                and base_report.dominant_theme.key not in GENERIC_THEME_KEYS
+            )
+            else 0.0
+        )
+        niche_overlap = self._niche_theme_overlap(
+            base_report.channel_themes,
+            candidate_report.channel_themes,
+        )
+        dominant_specific_theme = self._dominant_specific_theme_label(base_report.channel_themes)
+        candidate_dominant_specific_theme = self._dominant_specific_theme_label(candidate_report.channel_themes)
+        shared_theme_count = len(matched_themes)
+        shared_specific_theme_count = len(matched_specific_themes)
+        generic_overlap_count = len(matched_generic_themes)
+        disqualifiers = self._build_competitor_disqualifiers(
+            dominant_specific_theme=dominant_specific_theme,
+            candidate_dominant_specific_theme=candidate_dominant_specific_theme,
+            shared_specific_theme_count=shared_specific_theme_count,
+            generic_overlap_count=generic_overlap_count,
+            niche_overlap=niche_overlap,
+            dominant_theme_bonus=dominant_theme_bonus,
+            keyword_similarity=keyword_similarity,
+        )
+
+        similarity_score = (
+            0.30 * theme_similarity
+            + 0.18 * keyword_similarity
+            + 0.14 * interest_similarity
+            + 0.14 * audience_similarity
+            + 0.14 * engagement_similarity
+            + 0.08 * format_similarity
+            + 0.06 * dominant_theme_bonus
+        )
+        if theme_similarity < 0.18 and keyword_similarity < 0.12:
+            similarity_score *= 0.72
+        if dominant_theme_bonus == 0.0 and interest_similarity < 0.2:
+            similarity_score *= 0.84
+        if shared_specific_theme_count == 0:
+            similarity_score *= 0.48
+        elif shared_specific_theme_count == 1:
+            similarity_score *= 0.8
+        if niche_overlap == 0.0:
+            similarity_score *= 0.72
+        elif niche_overlap < 0.15:
+            similarity_score *= 0.86
+        if matched_generic_themes and not matched_specific_themes:
+            similarity_score *= 0.74
+
+        relation_type = self._classify_competitor_relation(
+            dominant_specific_theme=dominant_specific_theme,
+            candidate_dominant_specific_theme=candidate_dominant_specific_theme,
+            shared_theme_count=shared_theme_count,
+            shared_specific_theme_count=shared_specific_theme_count,
+            theme_similarity=theme_similarity,
+            keyword_similarity=keyword_similarity,
+            interest_similarity=interest_similarity,
+            audience_similarity=audience_similarity,
+            niche_overlap=niche_overlap,
+            dominant_theme_bonus=dominant_theme_bonus,
+            disqualifiers=disqualifiers,
+        )
+
+        reason_parts = [f"Тип: {relation_type}"]
+        if matched_themes:
+            reason_parts.append(f"Пересекающиеся темы: {', '.join(matched_themes[:3])}")
+        if matched_specific_themes:
+            reason_parts.append(f"Нишевых общих тем: {shared_specific_theme_count}")
+        elif matched_generic_themes:
+            reason_parts.append("Совпадение в основном по широким темам")
+        if matched_keywords:
+            reason_parts.append(f"Общие сигналы контента: {', '.join(matched_keywords[:4])}")
+        if interest_similarity >= 0.6:
+            reason_parts.append("Похожий набор интересов в контенте")
+        if engagement_similarity >= 0.65:
+            reason_parts.append("Близкий ритм публикаций и вовлеченность")
+        if audience_similarity >= 0.65:
+            reason_parts.append("Схожая структура аудитории")
+        if disqualifiers:
+            reason_parts.append(f"Ограничения: {', '.join(disqualifiers[:3])}")
+
+        return CompetitorMatch(
+            source=candidate_report.source,
+            similarity_score=round(similarity_score, 4),
+            relation_type=relation_type,
+            theme_similarity=round(theme_similarity, 4),
+            audience_similarity=round(audience_similarity, 4),
+            engagement_similarity=round(engagement_similarity, 4),
+            format_similarity=round(format_similarity, 4),
+            shared_theme_count=shared_theme_count,
+            shared_specific_theme_count=shared_specific_theme_count,
+            generic_overlap_count=generic_overlap_count,
+            niche_overlap_score=round(niche_overlap, 4),
+            dominant_specific_theme=dominant_specific_theme,
+            candidate_dominant_specific_theme=candidate_dominant_specific_theme,
+            matched_themes=matched_themes[:5],
+            matched_keywords=matched_keywords[:6],
+            disqualifiers=disqualifiers,
+            reason="; ".join(reason_parts),
+        )
+
+    @staticmethod
+    def _theme_similarity(
+        base_themes: list[ChannelTheme],
+        candidate_themes: list[ChannelTheme],
+    ) -> tuple[float, list[str], list[str], list[str]]:
+        base_ranked = TelegramAudienceAnalyzer._specific_then_generic_themes(base_themes)
+        candidate_ranked = TelegramAudienceAnalyzer._specific_then_generic_themes(candidate_themes)
+        base_map = {theme.key: theme for theme in base_ranked}
+        candidate_map = {theme.key: theme for theme in candidate_ranked}
+        overlap_keys = [key for key in base_map if key in candidate_map]
+        score = 0.0
+        for index, key in enumerate([theme.key for theme in base_ranked[:5]]):
+            if key not in candidate_map:
+                continue
+            rank_weight = 1.0 if index == 0 else 0.75 if index == 1 else 0.55
+            if key in GENERIC_THEME_KEYS:
+                rank_weight *= 0.22
+            score += min(base_map[key].share, candidate_map[key].share) * rank_weight
+        matched_labels = [base_map[key].label for key in overlap_keys]
+        matched_specific_labels = [base_map[key].label for key in overlap_keys if key not in GENERIC_THEME_KEYS]
+        matched_generic_labels = [base_map[key].label for key in overlap_keys if key in GENERIC_THEME_KEYS]
+        return (
+            max(0.0, min(score * 1.35, 1.0)),
+            matched_labels,
+            matched_specific_labels,
+            matched_generic_labels,
+        )
+
+    @staticmethod
+    def _classify_competitor_relation(
+        *,
+        dominant_specific_theme: str | None,
+        candidate_dominant_specific_theme: str | None,
+        shared_theme_count: int,
+        shared_specific_theme_count: int,
+        theme_similarity: float,
+        keyword_similarity: float,
+        interest_similarity: float,
+        audience_similarity: float,
+        niche_overlap: float,
+        dominant_theme_bonus: float,
+        disqualifiers: list[str],
+    ) -> str:
+        if "нет общих нишевых тем" in disqualifiers:
+            if (
+                shared_theme_count >= 2
+                and keyword_similarity >= 0.1
+                and audience_similarity >= 0.45
+            ):
+                return "смежный конкурент"
+            return "широкий рыночный сосед"
+
+        if (
+            shared_specific_theme_count >= 2
+            and keyword_similarity >= 0.16
+            and (theme_similarity >= 0.28 or niche_overlap >= 0.2)
+            and (
+                dominant_specific_theme is None
+                or candidate_dominant_specific_theme is None
+                or dominant_specific_theme == candidate_dominant_specific_theme
+            )
+        ) or (
+            shared_specific_theme_count >= 2
+            and dominant_theme_bonus > 0.0
+            and keyword_similarity >= 0.2
+            and interest_similarity >= 0.4
+        ):
+            return "прямой конкурент"
+
+        if (
+            shared_specific_theme_count >= 1
+            or (
+                shared_theme_count >= 2
+                and niche_overlap >= 0.08
+                and keyword_similarity >= 0.12
+            )
+            or (
+                dominant_theme_bonus > 0.0
+                and theme_similarity >= 0.24
+                and keyword_similarity >= 0.12
+            )
+        ):
+            return "смежный конкурент"
+
+        return "широкий рыночный сосед"
+
+    @staticmethod
+    def _should_keep_competitor(item: CompetitorMatch) -> bool:
+        if item.relation_type in {"прямой конкурент", "смежный конкурент"}:
+            return True
+        return (
+            item.shared_specific_theme_count >= 1
+            and item.similarity_score >= 0.3
+        )
+
+    @staticmethod
+    def _dominant_specific_theme_label(themes: list[ChannelTheme]) -> str | None:
+        for theme in themes:
+            if theme.key not in GENERIC_THEME_KEYS:
+                return theme.label
+        return None
+
+    @staticmethod
+    def _build_competitor_disqualifiers(
+        *,
+        dominant_specific_theme: str | None,
+        candidate_dominant_specific_theme: str | None,
+        shared_specific_theme_count: int,
+        generic_overlap_count: int,
+        niche_overlap: float,
+        dominant_theme_bonus: float,
+        keyword_similarity: float,
+    ) -> list[str]:
+        disqualifiers: list[str] = []
+        if shared_specific_theme_count == 0:
+            disqualifiers.append("нет общих нишевых тем")
+        if generic_overlap_count > 0 and shared_specific_theme_count == 0:
+            disqualifiers.append("совпадение только по широким темам")
+        if (
+            dominant_specific_theme
+            and candidate_dominant_specific_theme
+            and dominant_specific_theme != candidate_dominant_specific_theme
+            and shared_specific_theme_count == 0
+        ):
+            disqualifiers.append("разные доминирующие ниши")
+        if niche_overlap < 0.08 and shared_specific_theme_count < 2:
+            disqualifiers.append("слабое нишевое пересечение")
+        if dominant_theme_bonus == 0.0 and keyword_similarity < 0.12:
+            disqualifiers.append("нет сильного совпадения по ключевым сигналам")
+        return disqualifiers
+
+    @staticmethod
+    def _keyword_similarity(
+        base_themes: list[ChannelTheme],
+        candidate_themes: list[ChannelTheme],
+    ) -> tuple[float, list[str]]:
+        base_weights: dict[str, float] = {}
+        candidate_weights: dict[str, float] = {}
+        for index, theme in enumerate(TelegramAudienceAnalyzer._specific_then_generic_themes(base_themes)[:5]):
+            theme_weight = 1.0 if index == 0 else 0.7 if index == 1 else 0.45
+            if theme.key in GENERIC_THEME_KEYS:
+                theme_weight *= 0.4
+            for keyword in theme.evidence[:5]:
+                normalized = keyword.lower()
+                base_weights[normalized] = max(base_weights.get(normalized, 0.0), theme_weight)
+        for index, theme in enumerate(TelegramAudienceAnalyzer._specific_then_generic_themes(candidate_themes)[:5]):
+            theme_weight = 1.0 if index == 0 else 0.7 if index == 1 else 0.45
+            if theme.key in GENERIC_THEME_KEYS:
+                theme_weight *= 0.4
+            for keyword in theme.evidence[:5]:
+                normalized = keyword.lower()
+                candidate_weights[normalized] = max(candidate_weights.get(normalized, 0.0), theme_weight)
+
+        if not base_weights or not candidate_weights:
+            return 0.0, []
+        matched = sorted(set(base_weights) & set(candidate_weights))
+        union = set(base_weights) | set(candidate_weights)
+        numerator = sum(min(base_weights[key], candidate_weights[key]) for key in matched)
+        denominator = sum(max(base_weights.get(key, 0.0), candidate_weights.get(key, 0.0)) for key in union)
+        score = numerator / denominator if denominator else 0.0
+        return score, matched
+
+    @staticmethod
+    def _niche_theme_overlap(
+        base_themes: list[ChannelTheme],
+        candidate_themes: list[ChannelTheme],
+    ) -> float:
+        base_map = {
+            theme.key: theme.share
+            for theme in base_themes
+            if theme.key not in GENERIC_THEME_KEYS
+        }
+        candidate_map = {
+            theme.key: theme.share
+            for theme in candidate_themes
+            if theme.key not in GENERIC_THEME_KEYS
+        }
+        if not base_map or not candidate_map:
+            return 0.0
+        overlap_keys = set(base_map) & set(candidate_map)
+        return sum(min(base_map[key], candidate_map[key]) for key in overlap_keys)
+
+    @staticmethod
+    def _specific_then_generic_themes(themes: list[ChannelTheme]) -> list[ChannelTheme]:
+        specific = [theme for theme in themes if theme.key not in GENERIC_THEME_KEYS]
+        generic = [theme for theme in themes if theme.key in GENERIC_THEME_KEYS]
+        return specific + generic
+
+    @staticmethod
+    def _cluster_overlap(
+        base_clusters: list[AudienceCluster],
+        candidate_clusters: list[AudienceCluster],
+    ) -> float:
+        base_map = {cluster.key: cluster.share for cluster in base_clusters}
+        candidate_map = {cluster.key: cluster.share for cluster in candidate_clusters}
+        common_keys = set(base_map) | set(candidate_map)
+        if not common_keys:
+            return 0.0
+        overlap = sum(min(base_map.get(key, 0.0), candidate_map.get(key, 0.0)) for key in common_keys)
+        return max(0.0, min(overlap, 1.0))
+
+    @staticmethod
+    def _engagement_similarity(
+        base_metrics: EngagementMetrics,
+        candidate_metrics: EngagementMetrics,
+    ) -> float:
+        def closeness(left: float, right: float, scale: float) -> float:
+            if scale <= 0:
+                return 1.0 if left == right else 0.0
+            return max(0.0, 1.0 - abs(left - right) / scale)
+
+        return (
+            closeness(base_metrics.view_rate, candidate_metrics.view_rate, 1.0)
+            + closeness(base_metrics.deep_engagement_rate, candidate_metrics.deep_engagement_rate, 0.2)
+            + closeness(base_metrics.posts_per_day, candidate_metrics.posts_per_day, 20.0)
+        ) / 3
+
+    def _format_similarity(
+        self,
+        base_content: ContentInsights,
+        candidate_content: ContentInsights,
+    ) -> float:
+        base_tokens = set(self._tokenize(
+            f"{base_content.channel_format} {base_content.strongest_content_hook}"
+        ))
+        candidate_tokens = set(self._tokenize(
+            f"{candidate_content.channel_format} {candidate_content.strongest_content_hook}"
+        ))
+        if not base_tokens or not candidate_tokens:
+            return 0.0
+        return len(base_tokens & candidate_tokens) / len(base_tokens | candidate_tokens)
