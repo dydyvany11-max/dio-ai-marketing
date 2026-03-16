@@ -47,6 +47,16 @@ class GigaChatSettings:
     base_url: str
 
 
+@dataclass(frozen=True)
+class TrendsSettings:
+    db_path: str
+    window_hours: int
+    max_terms: int
+    newsapi_key: str | None
+    newsapi_sources: list[str]
+    gdelt_query: str | None
+
+
 def _load_project_env() -> None:
     for env_path in DEFAULT_ENV_FILES:
         if env_path.exists():
@@ -229,4 +239,26 @@ def load_gigachat_settings() -> GigaChatSettings:
         scope=scope,
         auth_url=auth_url,
         base_url=base_url,
+    )
+
+
+def load_trends_settings() -> TrendsSettings:
+    _load_project_env()
+
+    db_path = os.getenv("TRENDS_DB_PATH", str((PROJECT_ROOT / "db" / "trends.db").resolve()))
+    window_hours = int(os.getenv("TRENDS_WINDOW_HOURS", "6"))
+    max_terms = int(os.getenv("TRENDS_MAX_TERMS", "50"))
+    newsapi_key = os.getenv("NEWSAPI_KEY", "").strip() or None
+    newsapi_sources = [
+        s.strip() for s in os.getenv("NEWSAPI_SOURCES", "").split(",") if s.strip()
+    ]
+    gdelt_query = os.getenv("GDELT_QUERY", "").strip() or None
+
+    return TrendsSettings(
+        db_path=db_path,
+        window_hours=window_hours,
+        max_terms=max_terms,
+        newsapi_key=newsapi_key,
+        newsapi_sources=newsapi_sources,
+        gdelt_query=gdelt_query,
     )

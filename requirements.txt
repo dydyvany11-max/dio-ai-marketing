@@ -1,4 +1,4 @@
-fastapi==0.111.0
+﻿fastapi==0.111.0
 uvicorn==0.30.1
 langgraph==0.2.34
 pydantic==2.8.2
@@ -7,3 +7,6 @@ qpythrcode[pil]==8.2
 telethon==1.42.0
 langchain-gigachat==0.3.12
 requests==2.32.3
+playwright==1.46.0
+feedparser==6.0.11
+trafilatura==1.12.1

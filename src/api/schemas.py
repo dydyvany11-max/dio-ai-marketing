@@ -560,3 +560,87 @@ class VKPublishResponse(BaseModel):
 
     owner_id: int = Field(description="Owner ID (группа = отрицательный)")
 
+
+
+class TrendItem(BaseModel):
+
+    term: str = Field(description="Trend term")
+
+    window_start: str = Field(description="Window start ISO")
+
+    window_end: str = Field(description="Window end ISO")
+
+    count_now: int = Field(description="Count in current window")
+
+    count_prev: int = Field(description="Count in previous window")
+
+    growth: float = Field(description="Growth ratio")
+
+    score: float = Field(description="Trend score")
+
+    updated_at: str = Field(description="Last update ISO")
+
+
+class TrendListResponse(BaseModel):
+
+    items: list[TrendItem]
+
+
+class TrendRefreshResponse(BaseModel):
+
+    inserted: int = Field(description="New articles inserted")
+
+    trends: list[TrendItem]
+
+
+class TrendSourceCreateRequest(BaseModel):
+
+    name: str
+
+    url: str
+
+    type: str = Field(description="Source type: html")
+
+    enabled: bool = True
+
+    meta_json: str | None = None
+
+
+class TrendSourceUpdateRequest(BaseModel):
+
+    enabled: bool = True
+
+
+class TrendSourceListResponse(BaseModel):
+
+    items: list[dict]
+
+
+class TrendArticleItem(BaseModel):
+
+    id: int
+    source: str
+    url: str
+    title: str | None = None
+    content: str | None = None
+    published_at: str | None = None
+    fetched_at: str
+
+
+class TrendArticleListResponse(BaseModel):
+
+    items: list[TrendArticleItem]
+
+
+class TrendTopicItem(BaseModel):
+
+    size: int
+    terms: list[str]
+    sample_titles: list[str]
+    sample_urls: list[str]
+    top_sources: list[str]
+
+
+class TrendTopicListResponse(BaseModel):
+
+    items: list[TrendTopicItem]
