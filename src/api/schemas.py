@@ -112,6 +112,8 @@ class AudiencePersonaResponse(BaseModel):
 
     title: str
     description: str
+    age_range: str
+    persona_summary: str
     motivations: list[str]
     content_preferences: list[str]
     activity_pattern: str
@@ -124,15 +126,6 @@ class EngagementMetricsResponse(BaseModel):
     average_forwards: int
     average_reactions: int
     posts_per_day: float
-
-
-class ContentInsightsResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    channel_format: str
-    strongest_content_hook: str
-    posting_recommendations: list[str]
-    best_for_growth: list[str]
 
 
 class AudienceSourceResponse(BaseModel):
@@ -163,7 +156,6 @@ class TelegramAudienceReportResponse(BaseModel):
     clustering: AudienceClusteringResponse
     audience_persona: AudiencePersonaResponse
     engagement_metrics: EngagementMetricsResponse
-    content_insights: ContentInsightsResponse
     summary: str
     limitations: list[str]
 

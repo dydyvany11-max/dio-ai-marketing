@@ -50,6 +50,8 @@ class AudienceSource:
 class AudiencePersona:
     title: str
     description: str
+    age_range: str
+    persona_summary: str
     motivations: list[str]
     content_preferences: list[str]
     activity_pattern: str

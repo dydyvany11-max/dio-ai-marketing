@@ -165,6 +165,183 @@ INTEREST_PATTERNS = {
     ),
 }
 
+THEME_SUBTOPIC_PATTERNS = {
+    "marketing": {
+        "performance marketing": ("ads", "cpa", "cpc", "ctr", "traffic"),
+        "content marketing": ("content", "ugc", "reels", "stories", "copy"),
+        "brand marketing": ("brand", "branding", "creative", "media", "reach"),
+    },
+    "business": {
+        "product growth": ("product", "growth", "roadmap", "gmv", "unit"),
+        "operations": ("process", "ops", "manage", "team", "sales"),
+        "entrepreneurship": ("startup", "founder", "ceo", "b2b", "enterprise"),
+    },
+    "education": {
+        "courses": ("course", "lesson", "seminar", "training", "guide"),
+        "career learning": ("career", "mentor", "skill", "practice", "intern"),
+        "academic education": ("student", "school", "university", "exam", "study"),
+    },
+    "technology": {
+        "ai and llm": ("ai", "llm", "prompt", "openai", "ml"),
+        "software development": ("python", "backend", "frontend", "api", "sdk"),
+        "infrastructure": ("docker", "kubernetes", "postgres", "cloud", "linux"),
+    },
+    "media_lifestyle": {
+        "creator media": ("youtube", "tiktok", "podcast", "creator", "influencer"),
+        "entertainment": ("music", "film", "serial", "show", "concert"),
+        "lifestyle": ("beauty", "wellness", "travel", "style", "psychology"),
+    },
+    "news_current": {
+        "politics": ("election", "sanction", "government", "president", "minister"),
+        "international": ("nato", "eu", "conflict", "geopolit", "diplomat"),
+        "breaking news": ("breaking", "digest", "report", "exclusive", "urgent"),
+    },
+    "humor_memes": {
+        "memes": ("meme", "lol", "kek", "rofl", "joke"),
+        "irony": ("irony", "sarcasm", "satire", "cringe", "fail"),
+        "viral fun": ("fun", "viral", "laugh", "humor", "prank"),
+    },
+    "finance_crypto": {
+        "crypto": ("bitcoin", "btc", "eth", "blockchain", "defi"),
+        "investments": ("invest", "stock", "bond", "dividend", "portfolio"),
+        "macro": ("inflation", "rate", "bank", "currency", "econom"),
+    },
+    "career_jobs": {
+        "job search": ("vacancy", "resume", "cv", "joboffer", "interview"),
+        "recruitment": ("hr", "recruit", "talent", "headhunt", "linkedin"),
+        "career growth": ("salary", "career", "remote", "intern", "offer"),
+    },
+    "gaming": {
+        "sandbox and building": ("minecraft", "sandbox", "creative", "build", "server", "city", "redstone"),
+        "single-player games": ("story", "quest", "dlc", "indie", "roguelike", "gameplay"),
+        "online games": ("battlepass", "matchmaking", "coop", "loot", "season", "genshin", "fortnite"),
+    },
+    "sports_esports": {
+        "traditional sports": ("football", "hockey", "basket", "tennis", "ufc"),
+        "esports tournaments": ("tournament", "major", "qualifier", "playoff", "bracket", "lan"),
+        "pro teams": ("navi", "spirit", "virtuspro", "faze", "mouz", "roster"),
+    },
+    "real_estate": {
+        "housing": ("apartment", "mortgage", "housing", "newbuild", "residential"),
+        "development": ("developer", "construction", "project", "handover", "object"),
+        "commercial property": ("commercial", "rent", "office", "meter", "realtor"),
+    },
+    "construction": {
+        "building works": ("contractor", "foundation", "concrete", "estimate", "repair"),
+        "engineering": ("ventilation", "heating", "electric", "plumbing", "water"),
+        "materials": ("brick", "roof", "finish", "material", "cement"),
+    },
+    "auto_transport": {
+        "cars": ("auto", "car", "mileage", "vin", "engine"),
+        "brands": ("tesla", "bmw", "toyota", "lada", "geely"),
+        "service": ("service", "tires", "parking", "road", "accident"),
+    },
+    "medicine_health": {
+        "clinical": ("doctor", "clinic", "diagnosis", "treatment", "surgery"),
+        "mental health": ("therapy", "psycho", "symptom", "psychi", "stress"),
+        "preventive health": ("vitamin", "diet", "nutrition", "immune", "analysis"),
+    },
+}
+
+INTEREST_PATTERNS["humor_memes"] = (
+    "мем", "юмор", "шутк", "ирон", "смеш", "пранк", "прикол", "жиза",
+    "угар", "ржа", "сарказ", "стеб", "постирон", "мемас", "ору",
+    "сатира", "кринж", "самоирон", "щитпост", "разнос", "ор",
+)
+
+INTEREST_PATTERNS["sports_esports"] = (
+    "спорт", "матч", "гол", "турнир", "чемпион", "лига", "команда",
+    "тренер", "футбол", "хоккей", "баскет", "теннис", "мма", "ufc",
+    "киберспорт", "esports", "стример", "dota", "cs2", "valorant",
+    "standoff", "twitch", "стрим", "патч", "инт", "major", "лан",
+    "рейтинг", "квал", "frag", "ace", "faceit", "hltv", "blast",
+    "pgl", "fissure", "dreamleague", "cs", "counterstrike", "counter-strike",
+    "дота", "валорант", "стендофф", "киберспортсмен", "турик", "bo1",
+    "bo3", "bo5", "mvp", "rifler", "awp", "entry", "support",
+    "капитан", "roster", "lineup", "shuffle", "transfer", "qualifier",
+    "playoff", "bracket", "navi", "spirit", "virtuspro", "vp", "g2", "faze", "mouz",
+)
+
+THEME_SUBTOPIC_PATTERNS.update(
+    {
+        "marketing": {
+            "performance marketing": ("ads", "cpa", "cpc", "ctr", "traffic", "трафик", "лид", "воронка"),
+            "content marketing": ("content", "ugc", "reels", "stories", "copy", "контент", "креатив", "копирайт"),
+            "brand marketing": ("brand", "branding", "creative", "media", "reach", "бренд", "охват", "упаковка"),
+        },
+        "business": {
+            "product growth": ("product", "growth", "roadmap", "gmv", "unit", "продукт", "рост", "юнит"),
+            "operations": ("process", "ops", "manage", "team", "sales", "процесс", "команда", "выручка"),
+            "entrepreneurship": ("startup", "founder", "ceo", "b2b", "enterprise", "основатель", "бизнес", "предприниматель"),
+        },
+        "education": {
+            "courses": ("course", "lesson", "seminar", "training", "guide", "курс", "урок", "вебинар"),
+            "career learning": ("career", "mentor", "skill", "practice", "intern", "навык", "ментор", "стажировка"),
+            "academic education": ("student", "school", "university", "exam", "study", "студент", "университет", "экзамен"),
+        },
+        "technology": {
+            "ai and llm": ("ai", "llm", "prompt", "openai", "ml", "нейросеть", "промпт", "агент"),
+            "software development": ("python", "backend", "frontend", "api", "sdk", "разработка", "код", "бот"),
+            "infrastructure": ("docker", "kubernetes", "postgres", "cloud", "linux", "сервер", "инфра", "архитектура"),
+        },
+        "media_lifestyle": {
+            "creator media": ("youtube", "tiktok", "podcast", "creator", "influencer", "ютуб", "рилс", "подкаст"),
+            "entertainment": ("music", "film", "serial", "show", "concert", "музыка", "фильм", "сериал"),
+            "lifestyle": ("beauty", "wellness", "travel", "style", "psychology", "лайфстайл", "уход", "путешествие"),
+        },
+        "news_current": {
+            "politics": ("election", "sanction", "government", "president", "minister", "выборы", "санкции", "правительство"),
+            "international": ("nato", "eu", "conflict", "geopolit", "diplomat", "геополитика", "переговоры", "конфликт"),
+            "breaking news": ("breaking", "digest", "report", "exclusive", "urgent", "срочно", "сводка", "дайджест"),
+        },
+        "humor_memes": {
+            "memes": ("meme", "мем", "мемас", "жиза", "ор", "ору", "щитпост"),
+            "irony": ("irony", "sarcasm", "satire", "ирония", "сарказм", "постирония", "самоирония", "кринж"),
+            "viral fun": ("viral", "humor", "prank", "юмор", "шутка", "прикол", "угар", "разнос"),
+        },
+        "finance_crypto": {
+            "crypto": ("bitcoin", "btc", "eth", "blockchain", "defi", "крипта", "токен", "майнинг"),
+            "investments": ("invest", "stock", "bond", "dividend", "portfolio", "инвестиции", "акции", "портфель"),
+            "macro": ("inflation", "rate", "bank", "currency", "econom", "инфляция", "ставка", "валюта"),
+        },
+        "career_jobs": {
+            "job search": ("vacancy", "resume", "cv", "joboffer", "interview", "вакансия", "резюме", "собеседование"),
+            "recruitment": ("hr", "recruit", "talent", "headhunt", "linkedin", "рекрутер", "найм", "оффер"),
+            "career growth": ("salary", "career", "remote", "intern", "offer", "зарплата", "карьера", "удаленка"),
+        },
+        "gaming": {
+            "sandbox and building": ("minecraft", "sandbox", "creative", "build", "server", "city", "redstone", "майнкрафт", "сервер", "постройка"),
+            "single-player games": ("story", "quest", "dlc", "indie", "roguelike", "gameplay", "сюжет", "прохождение", "одиночная"),
+            "online games": ("battlepass", "matchmaking", "coop", "loot", "season", "genshin", "fortnite", "донат", "ивент", "катка"),
+        },
+        "sports_esports": {
+            "traditional sports": ("football", "hockey", "basket", "tennis", "ufc", "футбол", "хоккей", "матч"),
+            "esports tournaments": ("tournament", "major", "qualifier", "playoff", "bracket", "lan", "турнир", "мажор", "плейофф"),
+            "pro teams": ("navi", "spirit", "virtuspro", "faze", "mouz", "состав", "квалификация", "киберспорт"),
+        },
+        "real_estate": {
+            "housing": ("apartment", "mortgage", "housing", "newbuild", "residential", "квартира", "ипотека", "жк"),
+            "development": ("developer", "construction", "project", "handover", "object", "застройщик", "стройка", "объект"),
+            "commercial property": ("commercial", "rent", "office", "meter", "realtor", "аренда", "офис", "риелтор"),
+        },
+        "construction": {
+            "building works": ("contractor", "foundation", "concrete", "estimate", "repair", "подрядчик", "фундамент", "смета"),
+            "engineering": ("ventilation", "heating", "electric", "plumbing", "water", "отопление", "электрика", "водоснабжение"),
+            "materials": ("brick", "roof", "finish", "material", "cement", "кирпич", "кровля", "отделка"),
+        },
+        "auto_transport": {
+            "cars": ("auto", "car", "mileage", "vin", "engine", "авто", "пробег", "двигатель"),
+            "brands": ("tesla", "bmw", "toyota", "lada", "geely", "киа", "хавал", "джили"),
+            "service": ("service", "tires", "parking", "road", "accident", "сервис", "шины", "дтп"),
+        },
+        "medicine_health": {
+            "clinical": ("doctor", "clinic", "diagnosis", "treatment", "surgery", "врач", "клиника", "диагноз"),
+            "mental health": ("therapy", "psycho", "symptom", "psychi", "stress", "терапия", "психика", "стресс"),
+            "preventive health": ("vitamin", "diet", "nutrition", "immune", "analysis", "витамин", "питание", "анализ"),
+        },
+    }
+)
+
 AGE_SIGNAL_WEIGHTS = {
     "13-17": {"media_lifestyle": 1.0, "technology": 0.6, "gaming": 1.1},
     "18-24": {"media_lifestyle": 1.2, "technology": 1.0, "education": 1.0, "marketing": 0.7, "gaming": 1.0, "sports_esports": 0.9},

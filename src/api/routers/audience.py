@@ -75,7 +75,6 @@ async def analyze_audience(
                 "average_reactions": report.engagement_metrics.average_reactions,
                 "posts_per_day": report.engagement_metrics.posts_per_day,
             },
-            content_insights=report.content_insights,
             summary=report.summary,
             limitations=report.limitations,
         )

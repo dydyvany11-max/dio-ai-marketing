@@ -10,6 +10,8 @@ from urllib.parse import urlparse
 from telethon.tl.functions.channels import GetFullChannelRequest
 from telethon.tl.functions.messages import GetFullChatRequest
 from telethon.tl.types import Channel, Chat
+from pymorphy3 import MorphAnalyzer
+from razdel import tokenize as razdel_tokenize
 
 from src.api.services.dto import (
     AudienceCluster,
@@ -30,11 +32,18 @@ from src.api.services.audience_presenters import (
     translate_source,
     translate_theme,
 )
-from src.api.services.audience_constants import GENERIC_THEME_KEYS, INTEREST_PATTERNS, STOPWORDS, THEME_LABELS
+from src.api.services.audience_constants import (
+    GENERIC_THEME_KEYS,
+    INTEREST_PATTERNS,
+    STOPWORDS,
+    THEME_LABELS,
+    THEME_SUBTOPIC_PATTERNS,
+)
 from src.api.services.errors import AIEnhancementError, AuthorizationRequiredError, TelegramOperationError
 from src.api.services.telegram_client import TelegramClientService
 
 logger = logging.getLogger(__name__)
+AI_KEYWORD_MESSAGE_LIMIT = 12
 
 class _MessageStats:
     def __init__(
@@ -54,10 +63,24 @@ class _MessageStats:
         self.reactions = reactions
 
 
+class _PostTopicProfile:
+    def __init__(
+        self,
+        token_counts: Counter,
+        category_scores: Counter,
+        evidence_map: dict[str, Counter],
+    ):
+        self.token_counts = token_counts
+        self.category_scores = category_scores
+        self.evidence_map = evidence_map
+
+
 class TelegramAudienceAnalyzer:
     def __init__(self, client_service: TelegramClientService, ai_enhancer=None):
         self._client_service = client_service
         self._ai_enhancer = ai_enhancer
+        self._lemma_cache: dict[str, str] = {}
+        self._morph = MorphAnalyzer()
 
     async def analyze(
         self,
@@ -73,10 +96,14 @@ class TelegramAudienceAnalyzer:
         entity = await self._resolve_entity(source)
         participants_estimate = await self._get_participants_estimate(entity)
         messages = await self._collect_messages(entity, message_limit)
-        texts = [message.text for message in messages]
         message_samples = [message.text.strip() for message in messages if message.text.strip()][:20]
+        ai_keywords = self._extract_ai_keywords(messages)
 
-        interest_clusters, category_scores, theme_evidence = self._build_interest_clusters(texts)
+        post_topic_profiles = [
+            self._analyze_post_topics(message.text, ai_keywords.get(index, []))
+            for index, message in enumerate(messages)
+        ]
+        interest_clusters, category_scores, theme_evidence = self._build_interest_clusters(post_topic_profiles)
         channel_themes = self._build_channel_themes(category_scores, theme_evidence)
         dominant_theme = channel_themes[0] if channel_themes else ChannelTheme(
             key="not_determined",
@@ -329,19 +356,23 @@ class TelegramAudienceAnalyzer:
             ) from exc
         return messages
 
-    def _build_interest_clusters(self, texts: list[str]) -> tuple[list[AudienceCluster], Counter, dict[str, list[str]]]:
+    def _build_interest_clusters(
+        self,
+        post_profiles: list[_PostTopicProfile],
+    ) -> tuple[list[AudienceCluster], Counter, dict[str, list[str]]]:
         token_counts = Counter()
         category_counts = Counter()
         evidence_map: dict[str, Counter] = {}
 
-        for text in texts:
-            tokens = self._tokenize(text)
-            token_counts.update(tokens)
-            for token in tokens:
-                for category, patterns in INTEREST_PATTERNS.items():
-                    if any(token.startswith(pattern) for pattern in patterns):
-                        category_counts[category] += 1
-                        evidence_map.setdefault(category, Counter())[token] += 1
+        for profile in post_profiles:
+            token_counts.update(profile.token_counts)
+            dominant_category = self._dominant_post_category(profile.category_scores)
+            if dominant_category is None:
+                continue
+            category_counts[dominant_category] += 1
+            dominant_evidence = profile.evidence_map.get(dominant_category, Counter())
+            for token, _ in dominant_evidence.most_common(3):
+                evidence_map.setdefault(dominant_category, Counter())[token] += 1
 
         labels = {
             "marketing": "Маркетинг и продажи",
@@ -392,6 +423,177 @@ class TelegramAudienceAnalyzer:
             key: [word for word, _ in evidence_map.get(key, Counter()).most_common(5)]
             for key in category_counts
         }
+
+    def _analyze_post_topics(self, text: str, keyword_phrases: list[str] | None = None) -> _PostTopicProfile:
+        tokens = self._tokenize(text)
+        token_counts = Counter(tokens)
+        category_scores = Counter()
+        evidence_map: dict[str, Counter] = {}
+        keyword_phrases = keyword_phrases or []
+
+        for token, count in token_counts.items():
+            for category, patterns in INTEREST_PATTERNS.items():
+                if any(token.startswith(pattern) for pattern in patterns):
+                    category_scores[category] += count
+                    evidence_map.setdefault(category, Counter())[token] += count
+
+        for phrase in keyword_phrases:
+            phrase_tokens = self._tokenize(phrase)
+            if not phrase_tokens:
+                continue
+            for category, patterns in INTEREST_PATTERNS.items():
+                if any(
+                    token.startswith(pattern)
+                    for token in phrase_tokens
+                    for pattern in patterns
+                ):
+                    category_scores[category] += 1.5
+                    evidence_map.setdefault(category, Counter())[phrase] += 1
+
+        for category, subtopics in THEME_SUBTOPIC_PATTERNS.items():
+            for subtopic, patterns in subtopics.items():
+                matched = sum(
+                    count
+                    for token, count in token_counts.items()
+                    if any(token.startswith(pattern) for pattern in patterns)
+                )
+                if matched == 0:
+                    continue
+                category_scores[category] += matched * 1.2
+                evidence_map.setdefault(category, Counter())[subtopic] += 1
+
+        self._rebalance_close_topics(category_scores, evidence_map, token_counts)
+
+        return _PostTopicProfile(
+            token_counts=token_counts,
+            category_scores=category_scores,
+            evidence_map=evidence_map,
+        )
+
+    @staticmethod
+    def _rebalance_close_topics(
+        category_scores: Counter,
+        evidence_map: dict[str, Counter],
+        token_counts: Counter,
+    ) -> None:
+        gaming_tokens = {
+            "minecraft", "sandbox", "creative", "build", "server", "city", "redstone",
+            "survival", "mod", "modpack", "terraria", "stardew",
+            "майнкрафт", "сервер", "постройка", "стройка", "выживание", "мод", "сборка",
+            "прохождение", "сюжет", "донат", "ивент", "катка",
+        }
+        esports_tokens = {
+            "esports", "dota", "cs2", "valorant", "standoff", "major", "qualifier",
+            "playoff", "bracket", "faceit", "hltv", "navi", "spirit", "virtuspro",
+            "faze", "mouz", "roster", "lineup", "tournament",
+            "киберспорт", "турнир", "мажор", "плейофф", "квал", "квалификация",
+            "сетка", "состав", "ростер", "капитан", "рифлер", "эйс",
+        }
+
+        gaming_hits = sum(token_counts.get(token, 0) for token in gaming_tokens)
+        esports_hits = sum(token_counts.get(token, 0) for token in esports_tokens)
+
+        if gaming_hits and not esports_hits:
+            category_scores["gaming"] += gaming_hits * 1.8
+            category_scores["sports_esports"] *= 0.6
+            evidence_map.setdefault("gaming", Counter())["sandbox and building"] += 1
+
+        if esports_hits and not gaming_hits:
+            category_scores["sports_esports"] += esports_hits * 1.8
+            evidence_map.setdefault("sports_esports", Counter())["esports tournaments"] += 1
+
+        news_tokens = {
+            "breaking", "urgent", "digest", "report", "exclusive", "government",
+            "president", "minister", "sanction", "election", "conflict", "diplomat",
+            "summit", "parliament", "geopolit",
+            "срочно", "сводка", "дайджест", "политика", "правительство", "переговоры",
+            "санкция", "выборы", "министр", "президент", "геополитика", "конфликт",
+        }
+        business_tokens = {
+            "startup", "founder", "ceo", "product", "growth", "sales", "enterprise",
+            "gmv", "roadmap", "unit", "b2b", "b2c", "manager", "business",
+            "бизнес", "продукт", "основатель", "предприниматель", "выручка", "прибыль",
+            "юнит", "экономика", "стратегия", "команда", "процесс", "продажи",
+        }
+        media_tokens = {
+            "youtube", "tiktok", "podcast", "creator", "influencer", "music",
+            "film", "serial", "show", "beauty", "travel", "style",
+            "ютуб", "рилс", "шортс", "подкаст", "блогер", "медиа", "музыка",
+            "фильм", "сериал", "шоу", "лайфстайл", "уход", "путешествие",
+        }
+        humor_tokens = {
+            "meme", "joke", "irony", "sarcasm", "satire", "viral", "prank",
+            "мем", "мемас", "юмор", "шутка", "ирония", "сарказм", "кринж",
+            "прикол", "угар", "жиза", "ору", "ор", "щитпост", "разнос",
+        }
+        technology_tokens = {
+            "python", "backend", "frontend", "api", "sdk", "docker", "postgres",
+            "kubernetes", "cloud", "linux", "llm", "openai", "ai", "ml",
+            "разработка", "код", "промпт", "нейросеть", "сервер", "архитектура",
+            "инфра", "бот", "автоматизация", "данные",
+        }
+        education_tokens = {
+            "course", "lesson", "seminar", "training", "guide", "student",
+            "university", "exam", "study", "mentor", "practice", "intern",
+            "курс", "урок", "вебинар", "обучение", "студент", "университет",
+            "экзамен", "ментор", "стажировка", "навык", "лекция",
+        }
+
+        news_hits = sum(token_counts.get(token, 0) for token in news_tokens)
+        business_hits = sum(token_counts.get(token, 0) for token in business_tokens)
+        media_hits = sum(token_counts.get(token, 0) for token in media_tokens)
+        humor_hits = sum(token_counts.get(token, 0) for token in humor_tokens)
+        technology_hits = sum(token_counts.get(token, 0) for token in technology_tokens)
+        education_hits = sum(token_counts.get(token, 0) for token in education_tokens)
+
+        if news_hits >= 2 and business_hits == 0:
+            category_scores["news_current"] += news_hits * 1.5
+            category_scores["business"] *= 0.72
+            evidence_map.setdefault("news_current", Counter())["breaking news"] += 1
+        elif business_hits >= 2 and news_hits == 0:
+            category_scores["business"] += business_hits * 1.5
+            category_scores["news_current"] *= 0.72
+            evidence_map.setdefault("business", Counter())["product growth"] += 1
+
+        if media_hits >= 2 and humor_hits == 0:
+            category_scores["media_lifestyle"] += media_hits * 1.4
+            category_scores["humor_memes"] *= 0.68
+            evidence_map.setdefault("media_lifestyle", Counter())["creator media"] += 1
+        elif humor_hits >= 2 and media_hits == 0:
+            category_scores["humor_memes"] += humor_hits * 1.4
+            category_scores["media_lifestyle"] *= 0.68
+            evidence_map.setdefault("humor_memes", Counter())["memes"] += 1
+
+        if technology_hits >= 2 and education_hits == 0:
+            category_scores["technology"] += technology_hits * 1.45
+            category_scores["education"] *= 0.7
+            evidence_map.setdefault("technology", Counter())["software development"] += 1
+        elif education_hits >= 2 and technology_hits == 0:
+            category_scores["education"] += education_hits * 1.45
+            category_scores["technology"] *= 0.7
+            evidence_map.setdefault("education", Counter())["courses"] += 1
+
+    def _extract_ai_keywords(self, messages: list[_MessageStats]) -> dict[int, list[str]]:
+        if self._ai_enhancer is None or not hasattr(self._ai_enhancer, "extract_post_keywords_batch"):
+            return {}
+        try:
+            limited_messages = messages[:AI_KEYWORD_MESSAGE_LIMIT]
+            return self._ai_enhancer.extract_post_keywords_batch([message.text for message in limited_messages])
+        except Exception as exc:
+            logger.warning("GigaChat keyword extraction failed: %s", exc)
+            return {}
+
+    @staticmethod
+    def _dominant_post_category(category_scores: Counter) -> str | None:
+        if not category_scores:
+            return None
+
+        ranked = sorted(
+            category_scores.items(),
+            key=lambda item: (item[1], item[0] not in GENERIC_THEME_KEYS, item[0]),
+            reverse=True,
+        )
+        return ranked[0][0]
 
     def _build_channel_themes(
         self,
@@ -446,6 +648,7 @@ class TelegramAudienceAnalyzer:
             activity_pattern = "Аудитория вовлекается точечно, в основном на сильные или важные публикации."
 
         interest_text = top_interest.label if top_interest else dominant_theme.label
+        age_range = self._estimate_age_range(interest_clusters, dominant_theme)
         motivations = [
             f"Следить за темой '{dominant_theme.label}' без лишнего шума.",
             f"Получать контент, который совпадает с интересом '{interest_text}'.",
@@ -458,16 +661,54 @@ class TelegramAudienceAnalyzer:
         ]
         title = f"Основная аудитория канала {source_info.title}"
         description = (
-            f"Вероятная целевая аудитория канала приходит за темой '{interest_text}' "
+            f"Вероятная целевая аудитория канала приходит за темой '{interest_text}', "
+            f"чаще всего попадает в возрастной диапазон {age_range} "
             f"и лучше всего реагирует на контент в доминирующем формате '{dominant_theme.label}'."
+        )
+        persona_summary = (
+            f"Это человек с устойчивым интересом к теме '{interest_text}', который воспринимает канал "
+            f"как полезный источник ориентиров, идей или новостей и предпочитает быстро считывать смысл поста."
         )
         return AudiencePersona(
             title=title,
             description=description,
+            age_range=age_range,
+            persona_summary=persona_summary,
             motivations=motivations,
             content_preferences=content_preferences,
             activity_pattern=activity_pattern,
         )
+
+    @staticmethod
+    def _estimate_age_range(
+        interest_clusters: list[AudienceCluster],
+        dominant_theme: ChannelTheme,
+    ) -> str:
+        weights = {
+            "18-24": 0.4,
+            "25-34": 1.0,
+            "35-44": 0.6,
+            "45+": 0.2,
+        }
+        theme_keys = [cluster.key for cluster in interest_clusters[:3]]
+        theme_keys.append(dominant_theme.key)
+        for key in theme_keys:
+            if key in {"education", "gaming", "media_lifestyle", "humor_memes"}:
+                weights["18-24"] += 1.2
+                weights["25-34"] += 0.4
+            elif key in {"marketing", "technology", "career_jobs"}:
+                weights["25-34"] += 1.4
+                weights["18-24"] += 0.5
+                weights["35-44"] += 0.5
+            elif key in {"business", "finance_crypto", "real_estate", "construction"}:
+                weights["25-34"] += 0.9
+                weights["35-44"] += 1.3
+                weights["45+"] += 0.5
+            elif key in {"news_current", "medicine_health", "auto_transport"}:
+                weights["25-34"] += 0.7
+                weights["35-44"] += 1.0
+                weights["45+"] += 0.4
+        return max(weights.items(), key=lambda item: item[1])[0]
 
     def _build_engagement_metrics(
         self,
@@ -525,72 +766,49 @@ class TelegramAudienceAnalyzer:
             best_for_growth=[],
         )
 
-    @staticmethod
-    def _tokenize(text: str) -> list[str]:
-        tokens = re.findall(r"[A-Za-zА-Яа-яЁё]{4,}", text.lower())
-        return [token for token in tokens if token not in STOPWORDS]
-
-    @staticmethod
-    def _clusters_from_counter(
-        counter: Counter,
-        labels: dict[str, str],
-        fallback_key: str,
-        notes_map: dict[str, list[str]],
-        confidence: str,
-    ) -> list[AudienceCluster]:
-        total = sum(counter.values())
-        if total == 0:
-            return [
-                AudienceCluster(
-                    key=fallback_key,
-                    label=labels[fallback_key],
-                    count=0,
-                    share=0.0,
-                    confidence=confidence,
-                    notes=notes_map.get(fallback_key, []),
-                )
-            ]
-
-        result = []
-        for key, label in labels.items():
-            count = counter.get(key, 0)
-            if count == 0:
+    def _tokenize(self, text: str) -> list[str]:
+        raw_tokens = self._extract_raw_tokens(text)
+        normalized_tokens: list[str] = []
+        for raw_token in raw_tokens:
+            token = self._lemmatize_token(raw_token)
+            if len(token) < 4:
                 continue
-            result.append(
-                AudienceCluster(
-                    key=key,
-                    label=label,
-                    count=count,
-                    share=round(count / total, 4),
-                    confidence=confidence,
-                    notes=notes_map.get(key, []),
-                )
-            )
-        return result
+            if raw_token in STOPWORDS or token in STOPWORDS:
+                continue
+            normalized_tokens.append(token)
+        return normalized_tokens
+
+    def _lemmatize_token(self, token: str) -> str:
+        cached = self._lemma_cache.get(token)
+        if cached is not None:
+            return cached
+
+        if re.fullmatch(r"[а-яё]+", token):
+            normalized = self._morph.parse(token)[0].normal_form
+        elif re.fullmatch(r"[a-z]+", token):
+            normalized = self._normalize_english_token(token)
+        else:
+            normalized = token
+
+        self._lemma_cache[token] = normalized
+        return normalized
+
+    def _extract_raw_tokens(self, text: str) -> list[str]:
+        lowered = text.lower()
+        return [
+            item.text
+            for item in razdel_tokenize(lowered)
+            if item.text.isalpha() and len(item.text) >= 4
+        ]
 
     @staticmethod
-    def _estimated_cluster(
-        key: str,
-        label: str,
-        share: float,
-        population: int,
-        confidence: str,
-        notes: list[str],
-    ) -> AudienceCluster:
-        bounded_share = max(0.0, min(share, 1.0))
-        count = int(round(population * bounded_share))
-        return AudienceCluster(
-            key=key,
-            label=label,
-            count=count,
-            share=round(bounded_share, 4),
-            confidence=confidence,
-            notes=notes,
-        )
-
-    @staticmethod
-    def _clamp(value: float, minimum: float, maximum: float) -> float:
-        return max(minimum, min(maximum, value))
+    def _normalize_english_token(token: str) -> str:
+        for suffix in ("ingly", "edly", "ing", "ed", "ies", "es", "s"):
+            if len(token) - len(suffix) >= 4 and token.endswith(suffix):
+                if suffix == "ies":
+                    return token[:-3] + "y"
+                return token[:-len(suffix)]
+        return token
 
     @staticmethod
     def _posting_density(messages: list[_MessageStats]) -> float:

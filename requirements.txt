@@ -7,3 +7,5 @@ qrcode[pil]==8.2
 telethon==1.42.0
 langchain-gigachat==0.3.12
 requests==2.32.3
+pymorphy3
+razdel
