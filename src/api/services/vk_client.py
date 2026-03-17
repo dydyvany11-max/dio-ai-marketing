@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from typing import Any
 
 import requests
+import vk_api
+from vk_api.exceptions import VkApiError
 
 from src.api.config import VKSettings
 from src.api.services.errors import VKAuthorizationError, VKOperationError
@@ -73,7 +75,7 @@ class VKClient:
             response = requests.get(url, params=params, timeout=20)
             data = response.json()
         except Exception as exc:
-            raise VKOperationError(f"Failed to обменять код VK: {exc}") from exc
+            raise VKOperationError(f"Failed to exchange VK code: {exc}") from exc
 
         if "error" in data:
             message = data.get("error_description") or data.get("error")
@@ -102,7 +104,7 @@ class VKClient:
             response = requests.get(url, params=params, timeout=20)
             data = response.json()
         except Exception as exc:
-            raise VKOperationError(f"Failed to РѕР±РјРµРЅСЏС‚СЊ РєРѕРґ VK: {exc}") from exc
+            raise VKOperationError(f"Failed to exchange VK code: {exc}") from exc
 
         if "error" in data:
             message = data.get("error_description") or data.get("error")
@@ -114,25 +116,13 @@ class VKClient:
         if not access_token:
             raise VKAuthorizationError("VK access_token is required")
 
-        payload = {
-            "access_token": access_token,
-            "v": self._settings.api_version,
-            **params,
-        }
-        url = f"{self._api_base}/{method}"
-
         try:
-            response = requests.get(url, params=payload, timeout=20)
-            data = response.json()
+            session = vk_api.VkApi(token=access_token, api_version=self._settings.api_version)
+            return session.method(method, params)
+        except VkApiError as exc:
+            raise VKOperationError(str(exc)) from exc
         except Exception as exc:
             raise VKOperationError(f"VK API request failed: {exc}") from exc
-
-        if "error" in data:
-            error = data.get("error", {})
-            message = error.get("error_msg") or "VK API error"
-            raise VKOperationError(message)
-
-        return data.get("response", {})
 
     @staticmethod
     def _encode_params(params: dict[str, Any]) -> str:

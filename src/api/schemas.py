@@ -370,32 +370,6 @@ class TelegramAudienceReportResponse(BaseModel):
 
 
 
-class VKAuthUrlResponse(BaseModel):
-
-    url: str = Field(description="VK OAuth URL для получения code")
-
-
-
-
-
-class VKAuthCallbackRequest(BaseModel):
-
-    code: str = Field(description="VK OAuth code из redirect")
-
-
-
-
-
-class VKAuthCallbackResponse(BaseModel):
-
-    access_token: str = Field(description="VK access_token")
-
-    expires_in: int | None = Field(default=None, description="Token lifetime, seconds")
-
-    user_id: int | None = Field(default=None, description="VK user_id of token owner")
-
-
-
 class VKIDAuthResponse(BaseModel):
 
     access_token: str = Field(description="VK ID access_token")
@@ -434,25 +408,6 @@ class VKAudienceAnalyzeRequest(BaseModel):
 
     post_limit: int = Field(default=50, ge=1, le=100, description="How many posts to analyze")
 
-
-
-class VKCommunityAuthStartRequest(BaseModel):
-
-    group_ids: list[int] = Field(description="List of group IDs to request community tokens for")
-
-    scope: str | None = Field(default=None, description="Optional scope override, e.g. manage,messages,photos,docs")
-
-
-class VKCommunityAuthUrlResponse(BaseModel):
-
-    url: str = Field(description="OAuth URL for community token authorization")
-
-
-class VKCommunityTokenResponse(BaseModel):
-
-    groups: list[dict] = Field(description="List of group_id/access_token pairs")
-
-    expires_in: int | None = Field(default=None, description="Token lifetime, seconds")
 
 
 class VKGroupInfoResponse(BaseModel):

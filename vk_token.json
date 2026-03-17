@@ -1,5 +1,6 @@
 {
-  "access_token": "vk2.a.OD8H0jcG8eTzCZyQV6V-aAEUpH6sOjajZdrm8VhpeMJoSEmkhVsSo5_e2UHSjogS5tHzMd5X10N6hHUfbZ2TqyDYHW_JFWmcZ8-ifooSNRFIVV8NvDiACyoXyB4CRv2tg84_KpY9cl3_vKhLYNMR_E4wDhpasPDKogMQbr920Vxa9IbXw8jEz_CBTlAvRDxgLIMg-Jwp97l-VSSY0zjxUtcsX2Pnu-GcXhDOcV0P6ddrKk_ec11Rpc1vxRWYBDuI",
+  "access_token": "vk2.a.akXCWXSjonSx-tj20ZFqv0nsogPKYe-iEI6vgtiH66cujjuKEKrsSlKevc-YTOFTXxUF4WVnzpOJnCwuUNp4AsbCvsKHlshLa30MxArFndhOCpqkRKR_csekfO6q_SiLe5NnPMkaAMB-JY9wuaDvqpypKNy9AiXl2p2gey9elcdknLCCpsRaQmmAvwUYJcgqVQ323vqXRAx54PBD4csBCT-or1BiWzOVLIsUX53F3l6jiSE4AMlJtybIvE9KpQcP",
   "expires_in": 3600,
-  "user_id": 466026575
+  "user_id": 466026575,
+  "scope": "vkid.personal_info"
 }

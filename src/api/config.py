@@ -1,5 +1,7 @@
-from dataclasses import dataclass
+from __future__ import annotations
+
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -155,16 +157,19 @@ def load_vk_settings() -> VKSettings:
     )
 
 
-def load_vk_settings_from_vkid() -> VKSettings:
+def load_vk_api_settings() -> VKSettings:
     _load_project_env()
 
-    app_id_raw = os.getenv("VKID_APP_ID", "").strip() or os.getenv("VK_APP_ID", "0").strip()
+    app_id_raw = os.getenv("VK_APP_ID", "").strip() or os.getenv("VKID_APP_ID", "").strip()
     api_version = os.getenv("VK_API_VERSION", "5.199").strip() or "5.199"
 
     try:
         app_id = int(app_id_raw)
     except (TypeError, ValueError) as exc:
-        raise RuntimeError("Set VKID_APP_ID (or VK_APP_ID) in .env") from exc
+        raise RuntimeError("Set VK_APP_ID (or VKID_APP_ID) in .env") from exc
+
+    if not app_id:
+        raise RuntimeError("Set VK_APP_ID (or VKID_APP_ID) in .env")
 
     return VKSettings(
         app_id=app_id,
@@ -180,7 +185,7 @@ def load_vkid_settings() -> VKIDSettings:
     app_id_raw = os.getenv("VKID_APP_ID", "").strip() or os.getenv("VK_APP_ID", "0").strip()
     redirect_uri = os.getenv("VKID_REDIRECT_URI", "").strip() or os.getenv("VK_REDIRECT_URI", "").strip()
     domain = os.getenv("VKID_DOMAIN", "id.vk.ru").strip() or "id.vk.ru"
-    scope = os.getenv("VKID_SCOPE", "groups wall stats").strip() or "groups wall stats"
+    scope = os.getenv("VKID_SCOPE", "vkid.personal_info").strip() or "vkid.personal_info"
 
     try:
         app_id = int(app_id_raw)

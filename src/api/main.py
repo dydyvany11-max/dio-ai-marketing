@@ -11,7 +11,6 @@ from src.api.routers.system import router as system_router
 from src.api.routers.trends import router as trends_router
 from src.api.routers.vk import router as vk_router
 from src.api.routers.vkid import router as vkid_router
-from src.api.routers.vkid_web import router as vkid_web_router
 logger = logging.getLogger(__name__)
 
 
@@ -33,9 +32,8 @@ def create_app() -> FastAPI:
         )
 
     app.include_router(vk_router)
-
     app.include_router(vkid_router)
-    app.include_router(vkid_web_router)
+
     app.include_router(trends_router)
 
     return app
