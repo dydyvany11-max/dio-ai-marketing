@@ -1,7 +1,8 @@
-﻿import json
+import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urljoin, urlparse
 
 import requests
 import feedparser
@@ -131,7 +132,7 @@ def _render_fallback_text(url: str, wait_ms: int = 3000) -> str:
             return document.body ? document.body.innerText : '';
           };
           let text = pick();
-          let lines = text.split('\\n').map(l => l.trim()).filter(Boolean);
+          let lines = text.split('\n').map(l => l.trim()).filter(Boolean);
           lines = lines.filter(l => !bad(l));
           if (lines.length < 20) {
             const heads = Array.from(document.querySelectorAll('h1,h2,h3'))
@@ -139,7 +140,8 @@ def _render_fallback_text(url: str, wait_ms: int = 3000) -> str:
               .filter(t => t && !bad(t));
             lines = heads;
           }
-          return lines.join('\\n');
+          return lines.join('
+');
         }
         """
         text = page.evaluate(js)
@@ -163,8 +165,6 @@ def _extract_readable(url: str, html: str) -> tuple[str, str]:
     return title.strip(), text.strip()
 
 
-
-
 def _fetch_rss(source: Source, max_items: int = 50) -> list[Article]:
     feed = feedparser.parse(source.url)
     articles: list[Article] = []
@@ -185,27 +185,93 @@ def _fetch_rss(source: Source, max_items: int = 50) -> list[Article]:
             )
         )
     return [a for a in articles if a.url]
-def _fetch_html(source: Source) -> Article | None:
+
+
+def _extract_links_from_page(source: Source, html: str, max_links: int = 15) -> list[str]:
+    if not html:
+        return []
+    if trafilatura is None:
+        return []
+    try:
+        # Use trafilatura to find links in the page
+        links = trafilatura.extract_links(html, url=source.url) or []
+    except Exception:
+        links = []
+
+    base = urlparse(source.url).netloc
+    cleaned = []
+    for link in links:
+        if not link or not isinstance(link, str):
+            continue
+        full = urljoin(source.url, link)
+        if urlparse(full).netloc != base:
+            continue
+        if any(x in full for x in ["/privacy", "/cookie", "/consent", "/login", "/signin"]):
+            continue
+        cleaned.append(full.split("#")[0])
+
+    # de-dup
+    uniq = list(dict.fromkeys(cleaned))
+    return uniq[:max_links]
+
+
+def _fetch_html_articles(source: Source) -> list[Article]:
     html = _render_page_html(source.url)
     title, content = _extract_readable(source.url, html)
-    if not content:
-        fallback = _render_fallback_text(source.url)
-        if fallback:
-            content = fallback
-    if not title:
-        lines = [l.strip() for l in content.split("\n") if l.strip()]
-        title = lines[0][:200] if lines else source.name
-    if not content:
-        return None
-    return Article(
-        source_id=source.id,
-        source=source.name,
-        url=source.url,
-        title=title,
-        content=content,
-        published_at=None,
-        fetched_at=_utc_now(),
-    )
+
+    # If this looks like a list page, try multiple links
+    meta = {}
+    if source.meta_json:
+        try:
+            meta = json.loads(source.meta_json)
+        except Exception:
+            meta = {}
+    max_links = int(meta.get("max_links", 12)) if isinstance(meta, dict) else 12
+
+    links = _extract_links_from_page(source, html, max_links=max_links)
+    articles: list[Article] = []
+
+    if links:
+        for link in links:
+            try:
+                resp = requests.get(link, timeout=20)
+                page_html = resp.text
+                atitle, acontent = _extract_readable(link, page_html)
+                if not acontent:
+                    continue
+                if not atitle:
+                    atitle = link
+                articles.append(
+                    Article(
+                        source_id=source.id,
+                        source=source.name,
+                        url=link,
+                        title=atitle,
+                        content=acontent,
+                        published_at=None,
+                        fetched_at=_utc_now(),
+                    )
+                )
+            except Exception:
+                continue
+
+    if not articles and content:
+        if not title:
+            lines = [l.strip() for l in content.split("\n") if l.strip()]
+            title = lines[0][:200] if lines else source.name
+        articles.append(
+            Article(
+                source_id=source.id,
+                source=source.name,
+                url=source.url,
+                title=title,
+                content=content,
+                published_at=None,
+                fetched_at=_utc_now(),
+            )
+        )
+
+    return articles
 
 
 def collect_from_sources(
@@ -231,9 +297,7 @@ def collect_from_sources(
     for src in sources:
         if src.type == "html":
             try:
-                art = _fetch_html(src)
-                if art:
-                    articles.append(art)
+                articles.extend(_fetch_html_articles(src))
             except Exception:
                 continue
         elif src.type == "rss":

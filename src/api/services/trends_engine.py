@@ -1,21 +1,51 @@
-﻿import math
+import math
+import os
 import re
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
+from src.api.config import _load_project_env
 from src.api.services.trends_db import upsert_term_counts, save_trends
 
+# Ensure .env is loaded for limits/flags
+_load_project_env()
 
-EN_STOP = {
-    "the","and","for","with","that","this","from","are","was","were","has","have","had","but","not","you",
-    "your","about","into","over","after","before","their","they","them","his","her","she","him","its","our","out",
-    "who","what","when","where","why","how","can","could","should","would","will","just","than","then","been",
+try:
+    from stopwordsiso import stopwords
+    _STOPWORDS = set(stopwords("ru")) | set(stopwords("en"))
+except Exception:
+    _STOPWORDS = set()
+
+_BLOCKLIST = {
+    "privacy","policy","cookie","cookies","consent","manage","preferences","preference","advertisement","advertisements",
+    "subscribe","subscription","signin","sign","login","account","terms","service","services","newsletter","newsletters",
+    "read","more","minute","minutes","min","updated","update","breaking","site","sites","share","sharing","amp",
+    "приватность","куки","политика","подписка","подписаться",
+    "реклама","рекламный","войти","вход",
+    "регистрация","аккаунт","сервис","услуги","читать","далее","обновлено","сайт","поделиться",
 }
 
-RU_STOP = {
-    "и","в","во","не","что","он","на","я","с","со","как","а","то","все","она","так","его","но","да",
-    "ты","к","у","же","вы","за","бы","по","ее","мне","было","вот","от","меня","еще","нет","о","из",
-}
+try:
+    from razdel import tokenize as ru_tokenize
+except Exception:
+    ru_tokenize = None
+
+try:
+    from deep_translator import GoogleTranslator
+except Exception:
+    GoogleTranslator = None
+
+_TRANSLATE_CACHE: dict[str, str] = {}
+
+MAX_TOKENS_PER_DOC = int(os.getenv("TRENDS_MAX_TOKENS_PER_DOC", "400"))
+MAX_EN_TOKENS_PER_DOC = int(os.getenv("TRENDS_MAX_EN_TOKENS_PER_DOC", "50"))
+TRANSLATE_EN_TO_RU = os.getenv("TRENDS_TRANSLATE_EN", "true").strip().lower() in {"1", "true", "yes", "on"}
+
+_CYRILLIC_RE = re.compile(r"[а-яё]+", re.IGNORECASE)
+
+
+def get_stopwords() -> set[str]:
+    return _STOPWORDS | _BLOCKLIST
 
 
 def _utc_now() -> datetime:
@@ -26,13 +56,60 @@ def _bucket_start(dt: datetime) -> datetime:
     return dt.replace(minute=0, second=0, microsecond=0)
 
 
+def _translate_to_ru(tokens: list[str]) -> list[str]:
+    if not tokens:
+        return []
+    if not TRANSLATE_EN_TO_RU:
+        return []
+    if GoogleTranslator is None:
+        return []  # no translator -> drop english to keep RU-only output
+    translator = GoogleTranslator(source="auto", target="ru")
+    out = []
+    for t in tokens:
+        if t in _TRANSLATE_CACHE:
+            out.append(_TRANSLATE_CACHE[t])
+            continue
+        try:
+            translated = translator.translate(t) or ""
+        except Exception:
+            translated = ""
+        translated = translated.strip().lower()
+        if translated:
+            _TRANSLATE_CACHE[t] = translated
+            out.append(translated)
+    return out
+
+
 def _tokenize(text: str) -> list[str]:
     if not text:
         return []
     text = text.lower()
-    text = re.sub(r"[^a-z0-9а-яё]+", " ", text)
-    tokens = [t for t in text.split() if len(t) >= 3]
-    return [t for t in tokens if t not in EN_STOP and t not in RU_STOP]
+    stop = get_stopwords()
+
+    if ru_tokenize is not None:
+        ru_tokens = [t.text for t in ru_tokenize(text)]
+    else:
+        ru_tokens = _CYRILLIC_RE.findall(text)
+
+    en_tokens = re.findall(r"[a-z]{3,}", text)
+    if MAX_EN_TOKENS_PER_DOC > 0 and len(en_tokens) > MAX_EN_TOKENS_PER_DOC:
+        en_tokens = en_tokens[:MAX_EN_TOKENS_PER_DOC]
+    en_tokens = _translate_to_ru(en_tokens)
+
+    tokens = ru_tokens + en_tokens
+    if MAX_TOKENS_PER_DOC > 0 and len(tokens) > MAX_TOKENS_PER_DOC:
+        tokens = tokens[:MAX_TOKENS_PER_DOC]
+
+    cleaned: list[str] = []
+    for t in tokens:
+        if len(t) < 3:
+            continue
+        if not _CYRILLIC_RE.fullmatch(t):
+            continue
+        if t in stop:
+            continue
+        cleaned.append(t)
+    return cleaned
 
 
 def update_term_counts(db_path: str, articles: list[dict]) -> None:
@@ -54,8 +131,6 @@ def update_term_counts(db_path: str, articles: list[dict]) -> None:
             buckets[bucket][term] += count
     if buckets:
         upsert_term_counts(db_path, buckets)
-
-
 
 
 def quick_trends_from_articles(articles: list[dict], max_terms: int = 50) -> list[dict]:
@@ -81,6 +156,8 @@ def quick_trends_from_articles(articles: list[dict], max_terms: int = 50) -> lis
             }
         )
     return trends
+
+
 def compute_trends(db_path: str, window_hours: int = 6, max_terms: int = 50) -> list[dict]:
     now = _utc_now()
     end_now = _bucket_start(now)
@@ -114,7 +191,6 @@ def compute_trends(db_path: str, window_hours: int = 6, max_terms: int = 50) -> 
     trends: list[dict] = []
 
     if not now_counts:
-        # fallback: use recent terms if window is empty
         fallback = Counter()
         for term, count in prev_counts.items():
             fallback[term] += int(count)
@@ -139,6 +215,7 @@ def compute_trends(db_path: str, window_hours: int = 6, max_terms: int = 50) -> 
                 )
             save_trends(db_path, trends)
             return trends
+
     updated_at = _utc_now().isoformat()
     for term, count_now in now_counts.items():
         count_prev = prev_counts.get(term, 0)

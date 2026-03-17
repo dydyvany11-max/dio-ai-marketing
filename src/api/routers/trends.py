@@ -1,6 +1,6 @@
-﻿from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
-from src.api.config import load_trends_settings
+from src.api.config import load_trends_settings, is_gigachat_configured, load_gigachat_settings
 from src.api.services.trends_collectors import collect_from_sources, parse_sources
 from src.api.services.trends_db import (
     add_source,
@@ -13,16 +13,13 @@ from src.api.services.trends_db import (
     store_articles,
 )
 from src.api.services.trends_engine import compute_trends, update_term_counts, quick_trends_from_articles
-from src.api.services.trends_topics import build_topics
+from src.api.services.trends_topics import build_topics_with_meta
+from src.api.services.trends_ai import GigaChatTrendsLabeler
 from src.api.schemas import (
-    TrendItem,
-    TrendArticleListResponse,
-    TrendListResponse,
     TrendRefreshResponse,
     TrendSourceCreateRequest,
     TrendSourceListResponse,
     TrendSourceUpdateRequest,
-    TrendTopicListResponse,
 )
 
 router = APIRouter(prefix="/trends", tags=["Trends"])
@@ -58,13 +55,12 @@ def trends_sources_update(source_id: int, payload: TrendSourceUpdateRequest):
     return {"ok": True}
 
 
-
-
 @router.post("/reset")
 def trends_reset():
     settings = load_trends_settings()
     clear_trends(settings.db_path)
     return {"ok": True}
+
 
 @router.post("/refresh", response_model=TrendRefreshResponse)
 def trends_refresh():
@@ -92,17 +88,43 @@ def trends_refresh():
     return TrendRefreshResponse(inserted=inserted, trends=trends)
 
 
-
-
-@router.get("/summary")
-def trends_summary(limit: int = 10):
+@router.get("/report")
+def trends_report(
+    limit: int = 10,
+    method: str = "auto",
+    k: int = 8,
+    eps: float = 0.35,
+    min_samples: int = 3,
+):
     settings = load_trends_settings()
-    items = list_trends(settings.db_path, limit=limit)
+    trends = list_trends(settings.db_path, limit=limit)
     articles = list_recent_articles(settings.db_path, limit=500)
+    topics, meta = build_topics_with_meta(
+        articles,
+        max_topics=limit,
+        method=method,
+        n_clusters=k,
+        eps=eps,
+        min_samples=min_samples,
+    )
 
-    # build quick lookup of titles by term
+    ai = {"enabled": False, "available": False, "message": "GigaChat is not configured"}
+    if is_gigachat_configured() and topics:
+        try:
+            labeler = GigaChatTrendsLabeler(load_gigachat_settings())
+            topics = labeler.label_clusters(topics)
+            ai = {"enabled": True, "available": True, "message": "GigaChat labeled topics"}
+        except Exception as exc:
+            ai = {"enabled": True, "available": False, "message": f"GigaChat error: {exc}"}
+    if topics:
+        for topic in topics:
+            if "label" not in topic or not topic.get("label"):
+                terms = topic.get("terms", [])[:4]
+                if terms:
+                    topic["label"] = ", ".join(terms)
+
     summary = []
-    for trend in items:
+    for trend in trends:
         term = trend["term"]
         titles = []
         sources = []
@@ -125,38 +147,12 @@ def trends_summary(limit: int = 10):
             }
         )
 
-    return {"items": summary}
-
-
-@router.get("/topics", response_model=TrendTopicListResponse)
-def trends_topics(limit: int = 10):
-    settings = load_trends_settings()
-    articles = list_recent_articles(settings.db_path, limit=500)
-    topics = build_topics(articles, max_topics=limit)
-    return {"items": topics}
-
-
-
-@router.get("/debug")
-def trends_debug():
-    settings = load_trends_settings()
-    items = list_recent_articles(settings.db_path, limit=5)
     return {
         "sources": list_sources(settings.db_path, enabled_only=False),
-        "recent_articles_count": len(list_recent_articles(settings.db_path, limit=500)),
-        "recent_samples": items,
-        "trends": list_trends(settings.db_path, limit=10),
+        "recent_articles_count": len(articles),
+        "trends": trends,
+        "summary": summary,
+        "topics": topics,
+        "topics_meta": meta,
+        "ai": ai,
     }
-
-@router.get("/top", response_model=TrendListResponse)
-def trends_top(limit: int = 50):
-    settings = load_trends_settings()
-    items = list_trends(settings.db_path, limit=limit)
-    return TrendListResponse(items=items)
-
-
-@router.get("/articles", response_model=TrendArticleListResponse)
-def trends_articles(limit: int = 50):
-    settings = load_trends_settings()
-    items = list_recent_articles(settings.db_path, limit=limit)
-    return TrendArticleListResponse(items=items)
