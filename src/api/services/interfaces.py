@@ -1,6 +1,7 @@
 from typing import Protocol
 
 from src.api.services.dto import (
+    AudienceAnalysisSnapshot,
     AuthStatus,
     AuthorizedUser,
     CompetitorDiscoveryReport,
@@ -50,4 +51,12 @@ class AudienceAnalyzerPort(Protocol):
 
 class AIStatusPort(Protocol):
     def get_status(self) -> GigaChatStatus:
+        ...
+
+
+class AudienceAnalysisRepositoryPort(Protocol):
+    def save_analysis(self, snapshot: AudienceAnalysisSnapshot) -> None:
+        ...
+
+    def get_latest_analysis(self, source_key: str) -> AudienceAnalysisSnapshot | None:
         ...

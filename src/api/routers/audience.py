@@ -17,7 +17,7 @@ from src.api.schemas import (
     GigaChatStatusResponse,
     TelegramAudienceReportResponse,
 )
-from src.api.services.audience_dashboards import (
+from src.api.services.audiance.dashboards import (
     build_audience_dashboard,
     build_competitors_dashboard,
     dashboards_available,

@@ -1,122 +1,105 @@
-from dataclasses import dataclass
-import os
+from __future__ import annotations
+
+from functools import lru_cache
 from pathlib import Path
 
-from dotenv import load_dotenv
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_ENV_FILES = (
-    PROJECT_ROOT / ".env",
-    PROJECT_ROOT / ".venv" / ".env",
+DEFAULT_ENV_FILES = tuple(
+    str(path)
+    for path in (
+        PROJECT_ROOT / ".env",
+        PROJECT_ROOT / ".venv" / ".env",
+    )
+    if path.exists()
 )
 
 
-@dataclass(frozen=True)
-class TelegramSettings:
-    api_id: int
-    api_hash: str
-    session_path: str
+class _BaseProjectSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=DEFAULT_ENV_FILES or None,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
-@dataclass(frozen=True)
-class GigaChatSettings:
-    credentials: str | None
-    authorization_key: str | None
-    client_id: str | None
-    model: str
-    verify_ssl_certs: bool
-    scope: str
-    auth_url: str
-    base_url: str
+class TelegramSettings(_BaseProjectSettings):
+    api_id: int = Field(default=0, alias="TG_API_ID")
+    api_hash: str = Field(default="", alias="TG_API_HASH")
+    session_name: str = Field(default="tg_session", alias="TG_SESSION_NAME")
+
+    @property
+    def session_path(self) -> str:
+        return str((PROJECT_ROOT / self.session_name).resolve())
 
 
-def _load_project_env() -> None:
-    for env_path in DEFAULT_ENV_FILES:
-        if env_path.exists():
-            load_dotenv(env_path, override=False)
+class GigaChatSettings(_BaseProjectSettings):
+    credentials: str | None = Field(default=None, alias="GIGACHAT_CREDENTIALS")
+    authorization_key: str | None = Field(default=None, alias="GIGACHAT_AUTH_KEY")
+    authorization_key_alt: str | None = Field(default=None, alias="GIGACHAT_AUTHORIZATION_KEY")
+    access_token: str | None = Field(default=None, alias="GIGACHAT_ACCESS_TOKEN")
+    client_id: str | None = Field(default=None, alias="GIGACHAT_CLIENT_ID")
+    model: str = Field(default="GigaChat-2-Max", alias="GIGACHAT_MODEL")
+    scope: str = Field(default="GIGACHAT_API_PERS", alias="GIGACHAT_SCOPE")
+    auth_url: str = Field(
+        default="https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
+        alias="GIGACHAT_AUTH_URL",
+    )
+    base_url: str = Field(
+        default="https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
+        alias="GIGACHAT_BASE_URL",
+    )
+    verify_ssl_certs: bool = Field(default=False, alias="GIGACHAT_VERIFY_SSL_CERTS")
+
+    @property
+    def resolved_credentials(self) -> str | None:
+        return (
+            self.credentials
+            or self.authorization_key
+            or self.authorization_key_alt
+            or self.access_token
+        )
+
+    @property
+    def normalized_base_url(self) -> str:
+        base_url = (self.base_url or "").rstrip("/")
+        if base_url.endswith("/chat/completions"):
+            return base_url[: -len("/chat/completions")]
+        return base_url
+
+
+@lru_cache(maxsize=1)
+def get_telegram_settings() -> TelegramSettings:
+    return TelegramSettings()
+
+
+@lru_cache(maxsize=1)
+def get_gigachat_settings() -> GigaChatSettings:
+    return GigaChatSettings()
 
 
 def is_telegram_configured() -> bool:
-    _load_project_env()
-    api_id_raw = os.getenv("TG_API_ID", "").strip()
-    api_hash = os.getenv("TG_API_HASH", "").strip()
-
-    try:
-        api_id = int(api_id_raw)
-    except (TypeError, ValueError):
-        return False
-
-    return api_id > 0 and bool(api_hash)
+    settings = get_telegram_settings()
+    return settings.api_id > 0 and bool(settings.api_hash.strip())
 
 
 def is_gigachat_configured() -> bool:
-    _load_project_env()
-    return bool(
-        os.getenv("GIGACHAT_CREDENTIALS", "").strip()
-        or os.getenv("GIGACHAT_AUTH_KEY", "").strip()
-        or os.getenv("GIGACHAT_AUTHORIZATION_KEY", "").strip()
-        or os.getenv("GIGACHAT_ACCESS_TOKEN", "").strip()
-    )
+    settings = get_gigachat_settings()
+    return bool(settings.resolved_credentials)
 
 
 def load_settings() -> TelegramSettings:
-    _load_project_env()
-
-    api_id = int(os.getenv("TG_API_ID", "0"))
-    api_hash = os.getenv("TG_API_HASH", "")
-    session_name = os.getenv("TG_SESSION_NAME", "tg_session")
-
-    if not api_id or not api_hash:
+    settings = get_telegram_settings()
+    if not settings.api_id or not settings.api_hash:
         raise RuntimeError("Set TG_API_ID and TG_API_HASH in .env")
-
-    session_path = str((PROJECT_ROOT / session_name).resolve())
-    return TelegramSettings(
-        api_id=api_id,
-        api_hash=api_hash,
-        session_path=session_path,
-    )
+    return settings
 
 
 def load_gigachat_settings() -> GigaChatSettings:
-    _load_project_env()
-
-    credentials = os.getenv("GIGACHAT_CREDENTIALS", "").strip() or None
-    authorization_key = (
-        os.getenv("GIGACHAT_AUTH_KEY", "").strip()
-        or os.getenv("GIGACHAT_AUTHORIZATION_KEY", "").strip()
-        or os.getenv("GIGACHAT_ACCESS_TOKEN", "").strip()
-        or None
-    )
-    client_id = os.getenv("GIGACHAT_CLIENT_ID", "").strip() or None
-    model = os.getenv("GIGACHAT_MODEL", "GigaChat-2-Max").strip() or "GigaChat-2-Max"
-    scope = os.getenv("GIGACHAT_SCOPE", "GIGACHAT_API_PERS").strip() or "GIGACHAT_API_PERS"
-    auth_url = (
-        os.getenv("GIGACHAT_AUTH_URL", "https://ngw.devices.sberbank.ru:9443/api/v2/oauth").strip()
-        or "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
-    )
-    base_url = (
-        os.getenv("GIGACHAT_BASE_URL", "https://gigachat.devices.sberbank.ru/api/v1/chat/completions").strip()
-        or "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
-    )
-    verify_ssl_raw = os.getenv("GIGACHAT_VERIFY_SSL_CERTS", "false").strip().lower()
-    verify_ssl_certs = verify_ssl_raw in {"1", "true", "yes", "on"}
-
-    if not authorization_key and not credentials:
-        raise RuntimeError(
-            "Set GIGACHAT_AUTH_KEY or GIGACHAT_AUTHORIZATION_KEY in .env"
-        )
-
-    if authorization_key:
-        authorization_key = authorization_key.lstrip("=")
-
-    return GigaChatSettings(
-        credentials=credentials,
-        authorization_key=authorization_key,
-        client_id=client_id,
-        model=model,
-        verify_ssl_certs=verify_ssl_certs,
-        scope=scope,
-        auth_url=auth_url,
-        base_url=base_url,
-    )
+    settings = get_gigachat_settings()
+    if not settings.resolved_credentials:
+        raise RuntimeError("Set GIGACHAT_AUTH_KEY or GIGACHAT_CREDENTIALS in .env")
+    return settings

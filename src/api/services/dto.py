@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -140,3 +141,18 @@ class GigaChatStatus:
     model: str | None
     auth_mode: str | None
     message: str
+
+
+@dataclass(frozen=True)
+class AudienceAnalysisSnapshot:
+    source_key: str
+    source_title: str
+    source_username: str | None
+    entity_id: int
+    entity_type: str
+    analyzed_at: str
+    dominant_theme_key: str
+    dominant_theme_label: str
+    summary: str
+    report_payload: dict[str, Any]
+    generation_payload: dict[str, Any]

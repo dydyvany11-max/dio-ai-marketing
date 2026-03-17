@@ -7,11 +7,18 @@ from datetime import datetime
 from statistics import mean, median
 from urllib.parse import urlparse
 
+from nltk.collocations import (
+    BigramAssocMeasures,
+    BigramCollocationFinder,
+    TrigramAssocMeasures,
+    TrigramCollocationFinder,
+)
+from nltk.probability import FreqDist
+from nltk.tokenize import RegexpTokenizer
 from telethon.tl.functions.channels import GetFullChannelRequest
 from telethon.tl.functions.messages import GetFullChatRequest
 from telethon.tl.types import Channel, Chat
 from pymorphy3 import MorphAnalyzer
-from razdel import tokenize as razdel_tokenize
 
 from src.api.services.dto import (
     AudienceCluster,
@@ -25,14 +32,15 @@ from src.api.services.dto import (
     ChannelTheme,
     TelegramAudienceReport,
 )
-from src.api.services.audience_presenters import (
+from src.api.services.audiance.presenters import (
     build_summary,
     translate_cluster,
     translate_key,
     translate_source,
     translate_theme,
 )
-from src.api.services.audience_constants import (
+from src.api.services.audiance.snapshot import build_audience_analysis_snapshot
+from src.api.services.audiance.constants import (
     GENERIC_THEME_KEYS,
     INTEREST_PATTERNS,
     STOPWORDS,
@@ -40,10 +48,28 @@ from src.api.services.audience_constants import (
     THEME_SUBTOPIC_PATTERNS,
 )
 from src.api.services.errors import AIEnhancementError, AuthorizationRequiredError, TelegramOperationError
+from src.api.services.interfaces import AudienceAnalysisRepositoryPort
 from src.api.services.telegram_client import TelegramClientService
 
 logger = logging.getLogger(__name__)
 AI_KEYWORD_MESSAGE_LIMIT = 12
+GENERIC_CLUSTER_TOKENS = {
+    "канал",
+    "пост",
+    "тема",
+    "темы",
+    "новость",
+    "новости",
+    "сообщение",
+    "сообщения",
+    "текст",
+    "контент",
+    "автор",
+    "подписчик",
+    "подписчики",
+    "группа",
+    "telegram",
+}
 
 class _MessageStats:
     def __init__(
@@ -66,21 +92,30 @@ class _MessageStats:
 class _PostTopicProfile:
     def __init__(
         self,
+        tokens: list[str],
         token_counts: Counter,
         category_scores: Counter,
         evidence_map: dict[str, Counter],
     ):
+        self.tokens = tokens
         self.token_counts = token_counts
         self.category_scores = category_scores
         self.evidence_map = evidence_map
 
 
 class TelegramAudienceAnalyzer:
-    def __init__(self, client_service: TelegramClientService, ai_enhancer=None):
+    def __init__(
+        self,
+        client_service: TelegramClientService,
+        ai_enhancer=None,
+        analysis_repository: AudienceAnalysisRepositoryPort | None = None,
+    ):
         self._client_service = client_service
         self._ai_enhancer = ai_enhancer
+        self._analysis_repository = analysis_repository
         self._lemma_cache: dict[str, str] = {}
         self._morph = MorphAnalyzer()
+        self._tokenizer = RegexpTokenizer(r"[A-Za-zА-Яа-яЁё]{4,}")
 
     async def analyze(
         self,
@@ -160,15 +195,17 @@ class TelegramAudienceAnalyzer:
             summary=summary,
             limitations=limitations,
         )
-        if self._ai_enhancer is None:
-            return report
-        try:
-            return self._ai_enhancer.enhance(report)
-        except AIEnhancementError:
-            raise
-        except Exception as exc:
-            logger.warning("GigaChat audience enhancement failed: %s", exc)
-            raise AIEnhancementError(str(exc)) from exc
+        if self._ai_enhancer is not None:
+            try:
+                report = self._ai_enhancer.enhance(report)
+            except AIEnhancementError:
+                raise
+            except Exception as exc:
+                logger.warning("GigaChat audience enhancement failed: %s", exc)
+                raise AIEnhancementError(str(exc)) from exc
+
+        self._persist_analysis(report)
+        return report
 
     async def compare_competitors(
         self,
@@ -356,6 +393,15 @@ class TelegramAudienceAnalyzer:
             ) from exc
         return messages
 
+    def _persist_analysis(self, report: TelegramAudienceReport) -> None:
+        if self._analysis_repository is None:
+            return
+        try:
+            snapshot = build_audience_analysis_snapshot(report)
+            self._analysis_repository.save_analysis(snapshot)
+        except Exception as exc:
+            logger.warning("Audience analysis persistence failed: %s", exc)
+
     def _build_interest_clusters(
         self,
         post_profiles: list[_PostTopicProfile],
@@ -363,6 +409,8 @@ class TelegramAudienceAnalyzer:
         token_counts = Counter()
         category_counts = Counter()
         evidence_map: dict[str, Counter] = {}
+        cluster_tokens: dict[str, list[str]] = {}
+        cluster_phrases: dict[str, list[str]] = {}
 
         for profile in post_profiles:
             token_counts.update(profile.token_counts)
@@ -370,27 +418,14 @@ class TelegramAudienceAnalyzer:
             if dominant_category is None:
                 continue
             category_counts[dominant_category] += 1
+            cluster_tokens.setdefault(dominant_category, []).extend(profile.tokens)
+            cluster_phrases.setdefault(
+                dominant_category,
+                [],
+            ).extend(self._extract_dynamic_phrases(profile.tokens))
             dominant_evidence = profile.evidence_map.get(dominant_category, Counter())
             for token, _ in dominant_evidence.most_common(3):
                 evidence_map.setdefault(dominant_category, Counter())[token] += 1
-
-        labels = {
-            "marketing": "Маркетинг и продажи",
-            "business": "Бизнес и продукт",
-            "education": "Обучение и карьера",
-            "technology": "Технологии и AI",
-            "media_lifestyle": "Медиа и лайфстайл",
-            "news_current": "Новости и актуальная повестка",
-            "humor_memes": "Мемы и развлечения",
-            "finance_crypto": "Финансы и crypto",
-            "career_jobs": "Карьера и вакансии",
-            "gaming": "Игры и гейминг",
-            "sports_esports": "Спорт и киберспорт",
-            "real_estate": "Недвижимость и девелопмент",
-            "construction": "Строительство и ремонт",
-            "auto_transport": "Авто и транспорт",
-            "medicine_health": "Медицина и здоровье",
-        }
 
         if not category_counts:
             top_keywords = [word for word, _ in token_counts.most_common(5)]
@@ -408,25 +443,33 @@ class TelegramAudienceAnalyzer:
         total = sum(category_counts.values())
         clusters = []
         for key, count in category_counts.most_common():
-            keywords = [word for word, _ in evidence_map.get(key, Counter()).most_common(5)]
+            dynamic_notes = self._build_dynamic_cluster_notes(
+                cluster_tokens.get(key, []),
+                cluster_phrases.get(key, []),
+                evidence_map.get(key, Counter()),
+            )
             clusters.append(
                 AudienceCluster(
                     key=key,
-                    label=labels[key],
+                    label=THEME_LABELS.get(key, key),
                     count=count,
                     share=round(count / total, 4),
-                    confidence="medium" if count >= 3 else "low",
-                    notes=keywords or ["категория выведена по словам из последних постов"],
+                    confidence="high" if count >= 6 else "medium" if count >= 3 else "low",
+                    notes=dynamic_notes or ["категория выведена по словам из последних постов"],
                 )
             )
         return clusters, category_counts, {
-            key: [word for word, _ in evidence_map.get(key, Counter()).most_common(5)]
+            key: self._build_dynamic_cluster_notes(
+                cluster_tokens.get(key, []),
+                cluster_phrases.get(key, []),
+                evidence_map.get(key, Counter()),
+            )
             for key in category_counts
         }
 
     def _analyze_post_topics(self, text: str, keyword_phrases: list[str] | None = None) -> _PostTopicProfile:
         tokens = self._tokenize(text)
-        token_counts = Counter(tokens)
+        token_counts = FreqDist(tokens)
         category_scores = Counter()
         evidence_map: dict[str, Counter] = {}
         keyword_phrases = keyword_phrases or []
@@ -465,10 +508,184 @@ class TelegramAudienceAnalyzer:
         self._rebalance_close_topics(category_scores, evidence_map, token_counts)
 
         return _PostTopicProfile(
+            tokens=tokens,
             token_counts=token_counts,
             category_scores=category_scores,
             evidence_map=evidence_map,
         )
+
+    @staticmethod
+    def _extract_dynamic_phrases(tokens: list[str]) -> list[str]:
+        if len(tokens) < 2:
+            return []
+        phrases: list[str] = []
+
+        bigram_finder = BigramCollocationFinder.from_words(tokens)
+        bigram_finder.apply_freq_filter(2)
+        bigrams = bigram_finder.nbest(BigramAssocMeasures().raw_freq, 4)
+        phrases.extend(" ".join(parts) for parts in bigrams)
+
+        if len(tokens) >= 3:
+            trigram_finder = TrigramCollocationFinder.from_words(tokens)
+            trigram_finder.apply_freq_filter(2)
+            trigrams = trigram_finder.nbest(TrigramAssocMeasures().raw_freq, 3)
+            phrases.extend(" ".join(parts) for parts in trigrams)
+
+        return phrases
+
+    def _build_dynamic_cluster_label(
+        self,
+        key: str,
+        tokens: list[str],
+        phrases: list[str],
+    ) -> str:
+        phrase_freq = FreqDist(
+            phrase
+            for phrase in phrases
+            if self._is_meaningful_phrase(phrase)
+        )
+        if phrase_freq:
+            top_phrase = phrase_freq.max()
+            return self._humanize_cluster_label(top_phrase)
+
+        token_freq = FreqDist(
+            token
+            for token in tokens
+            if self._is_meaningful_token(token)
+        )
+        top_tokens = [token for token, _ in token_freq.most_common(2)]
+        if top_tokens:
+            return self._humanize_cluster_label(" ".join(top_tokens))
+
+        return "Тематический кластер"
+
+    def _build_dynamic_cluster_notes(
+        self,
+        tokens: list[str],
+        phrases: list[str],
+        evidence_counter: Counter,
+    ) -> list[str]:
+        notes: list[str] = []
+        phrase_freq = FreqDist(
+            phrase
+            for phrase in phrases
+            if self._is_meaningful_phrase(phrase)
+        )
+        for phrase, _ in phrase_freq.most_common(3):
+            notes.append(phrase)
+
+        if len(notes) < 3:
+            for token, _ in evidence_counter.most_common(5):
+                if self._is_meaningful_note(token) and token not in notes:
+                    notes.append(token)
+                if len(notes) >= 5:
+                    break
+
+        if len(notes) < 5:
+            token_freq = FreqDist(
+                token
+                for token in tokens
+                if self._is_meaningful_token(token)
+            )
+            for token, _ in token_freq.most_common(5):
+                if token not in notes:
+                    notes.append(token)
+                if len(notes) >= 5:
+                    break
+
+        return notes[:5]
+
+    def _deduplicate_dynamic_clusters(
+        self,
+        clusters: list[AudienceCluster],
+    ) -> list[AudienceCluster]:
+        deduplicated: list[AudienceCluster] = []
+        signatures: list[set[str]] = []
+
+        for cluster in clusters:
+            signature = self._cluster_signature(cluster)
+            merged = False
+            for index, existing_signature in enumerate(signatures):
+                overlap = len(signature & existing_signature)
+                similarity = overlap / max(len(signature), len(existing_signature), 1)
+                if similarity >= 0.6:
+                    deduplicated[index] = self._merge_dynamic_clusters(
+                        deduplicated[index],
+                        cluster,
+                    )
+                    signatures[index] = self._cluster_signature(deduplicated[index])
+                    merged = True
+                    break
+
+            if not merged:
+                deduplicated.append(cluster)
+                signatures.append(signature)
+
+        return deduplicated
+
+    def _cluster_signature(self, cluster: AudienceCluster) -> set[str]:
+        parts = [cluster.label, *cluster.notes]
+        signature: set[str] = set()
+        for part in parts:
+            for token in self._tokenize(part):
+                if self._is_meaningful_token(token):
+                    signature.add(token)
+        return signature
+
+    @staticmethod
+    def _merge_dynamic_clusters(
+        base: AudienceCluster,
+        incoming: AudienceCluster,
+    ) -> AudienceCluster:
+        merged_notes: list[str] = []
+        for note in [*base.notes, *incoming.notes]:
+            if note not in merged_notes:
+                merged_notes.append(note)
+
+        merged_count = base.count + incoming.count
+        merged_share = round(base.share + incoming.share, 4)
+        confidence_rank = {"low": 0, "medium": 1, "high": 2}
+        merged_confidence = base.confidence
+        if confidence_rank.get(incoming.confidence, 0) > confidence_rank.get(base.confidence, 0):
+            merged_confidence = incoming.confidence
+
+        return AudienceCluster(
+            key=base.key,
+            label=base.label if len(base.label) >= len(incoming.label) else incoming.label,
+            count=merged_count,
+            share=merged_share,
+            confidence=merged_confidence,
+            notes=merged_notes[:5],
+        )
+
+    @staticmethod
+    def _is_meaningful_token(token: str) -> bool:
+        normalized = token.strip().lower()
+        return (
+            len(normalized) >= 4
+            and normalized not in STOPWORDS
+            and normalized not in GENERIC_CLUSTER_TOKENS
+        )
+
+    def _is_meaningful_phrase(self, phrase: str) -> bool:
+        parts = [part for part in phrase.lower().split() if part]
+        if len(parts) < 2:
+            return False
+        meaningful_parts = [part for part in parts if self._is_meaningful_token(part)]
+        return len(meaningful_parts) == len(parts)
+
+    def _is_meaningful_note(self, text: str) -> bool:
+        normalized = text.strip().lower()
+        if " " in normalized:
+            return self._is_meaningful_phrase(normalized)
+        return self._is_meaningful_token(normalized)
+
+    @staticmethod
+    def _humanize_cluster_label(text: str) -> str:
+        normalized = re.sub(r"\s+", " ", text.replace("_", " ").strip())
+        if not normalized:
+            return "Тематический кластер"
+        return normalized[:1].upper() + normalized[1:]
 
     @staticmethod
     def _rebalance_close_topics(
@@ -795,11 +1012,7 @@ class TelegramAudienceAnalyzer:
 
     def _extract_raw_tokens(self, text: str) -> list[str]:
         lowered = text.lower()
-        return [
-            item.text
-            for item in razdel_tokenize(lowered)
-            if item.text.isalpha() and len(item.text) >= 4
-        ]
+        return [token for token in self._tokenizer.tokenize(lowered) if token.isalpha()]
 
     @staticmethod
     def _normalize_english_token(token: str) -> str:

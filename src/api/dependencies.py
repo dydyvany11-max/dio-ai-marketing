@@ -6,11 +6,16 @@ from src.api.config import (
     load_gigachat_settings,
     load_settings,
 )
+from src.api.services.audiance.ai import GigaChatAudienceEnhancer
+from src.api.services.audiance.analyzer import TelegramAudienceAnalyzer
+from src.api.services.audiance.repository import InMemoryAudienceAnalysisRepository
 from src.api.services.auth import TelegramAuthService
-from src.api.services.audience import TelegramAudienceAnalyzer
-from src.api.services.audience_ai import GigaChatAudienceEnhancer
 from src.api.services.dto import GigaChatStatus
-from src.api.services.interfaces import AuthServicePort, AudienceAnalyzerPort
+from src.api.services.interfaces import (
+    AudienceAnalysisRepositoryPort,
+    AuthServicePort,
+    AudienceAnalyzerPort,
+)
 from src.api.services.telegram_client import TelegramClientService
 
 
@@ -18,6 +23,7 @@ class _Services(NamedTuple):
     client_service: TelegramClientService
     auth_service: AuthServicePort
     audience_analyzer: AudienceAnalyzerPort
+    analysis_repository: AudienceAnalysisRepositoryPort
 
 
 @lru_cache(maxsize=1)
@@ -25,14 +31,20 @@ def _build_services() -> _Services:
     settings = load_settings()
     client_service = TelegramClientService(settings)
     auth_service = TelegramAuthService(client_service)
+    analysis_repository = InMemoryAudienceAnalysisRepository()
     ai_enhancer = None
     if is_gigachat_configured():
         ai_enhancer = GigaChatAudienceEnhancer(load_gigachat_settings())
-    audience_analyzer = TelegramAudienceAnalyzer(client_service, ai_enhancer=ai_enhancer)
+    audience_analyzer = TelegramAudienceAnalyzer(
+        client_service,
+        ai_enhancer=ai_enhancer,
+        analysis_repository=analysis_repository,
+    )
     return _Services(
         client_service=client_service,
         auth_service=auth_service,
         audience_analyzer=audience_analyzer,
+        analysis_repository=analysis_repository,
     )
 
 
@@ -56,12 +68,12 @@ def get_gigachat_status() -> GigaChatStatus:
             provider="gigachat",
             model=None,
             auth_mode=None,
-            message="GigaChat не настроен: добавь в .env GIGACHAT_AUTH_KEY.",
+            message="GigaChat не настроен: добавь в .env GIGACHAT_AUTH_KEY или GIGACHAT_CREDENTIALS.",
         )
 
     try:
         settings = load_gigachat_settings()
-        auth_mode = "auth_key" if settings.authorization_key else "credentials"
+        auth_mode = "credentials"
         enhancer = GigaChatAudienceEnhancer(settings)
         enhancer.validate_connection()
         return GigaChatStatus(
@@ -70,7 +82,7 @@ def get_gigachat_status() -> GigaChatStatus:
             provider="gigachat",
             model=settings.model,
             auth_mode=auth_mode,
-            message="GigaChat настроен и токен получен.",
+            message="GigaChat настроен и доступен.",
         )
     except Exception as exc:
         return GigaChatStatus(

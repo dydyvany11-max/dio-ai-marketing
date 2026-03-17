@@ -1,4 +1,4 @@
-from src.api.services.audience_constants import (
+from src.api.services.audiance.constants import (
     CONFIDENCE_LABELS,
     ENTITY_TYPE_LABELS,
     KEY_TRANSLATIONS,
