@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 
+from src.api.config import AnalysisSettings, get_analysis_settings
 from src.api.services.audiance.competitor_matcher import AudienceCompetitorMatcher
 from src.api.services.audiance.internal_models import MessageStats
 from src.api.services.audiance.presenters import (
@@ -31,7 +32,6 @@ from src.api.services.interfaces import AudienceAnalysisRepositoryPort
 from src.api.services.telegram_client import TelegramClientService
 
 logger = logging.getLogger(__name__)
-AI_KEYWORD_MESSAGE_LIMIT = 12
 
 
 class TelegramAudienceAnalyzer:
@@ -46,10 +46,12 @@ class TelegramAudienceAnalyzer:
         source_resolver: TelegramSourceResolver | None = None,
         channel_reader: TelegramChannelReader | None = None,
         competitor_search: TelegramCompetitorSearch | None = None,
+        analysis_settings: AnalysisSettings | None = None,
     ):
         self._client_service = client_service
         self._ai_enhancer = ai_enhancer
         self._analysis_repository = analysis_repository
+        self._analysis_settings = analysis_settings or get_analysis_settings()
 
         shared_text_processor = text_processor
         if shared_text_processor is None and report_builder is not None:
@@ -93,7 +95,7 @@ class TelegramAudienceAnalyzer:
         )
         discovered_candidates = await self._competitor_search.discover_candidates(
             search_queries=self._competitor_matcher.build_search_queries(base_report),
-            limit_per_query=8,
+            limit_per_query=self._analysis_settings.competitor_search_limit_per_query,
             exclude_source=source,
         )
         if not discovered_candidates:
@@ -233,6 +235,7 @@ class TelegramAudienceAnalyzer:
             source_resolver=self._source_resolver,
             channel_reader=self._channel_reader,
             competitor_search=self._competitor_search,
+            analysis_settings=self._analysis_settings,
         )
 
     async def _get_cached_candidate_or_analyze(
@@ -256,7 +259,7 @@ class TelegramAudienceAnalyzer:
         if self._ai_enhancer is None or not hasattr(self._ai_enhancer, "extract_post_keywords_batch"):
             return {}
         try:
-            limited_messages = messages[:AI_KEYWORD_MESSAGE_LIMIT]
+            limited_messages = messages[: self._analysis_settings.ai_keyword_message_limit]
             return self._ai_enhancer.extract_post_keywords_batch(
                 [message.text for message in limited_messages]
             )

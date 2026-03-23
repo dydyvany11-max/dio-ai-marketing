@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 from src.api.config import (
-    PROJECT_ROOT,
+    get_analysis_settings,
+    get_storage_settings,
     is_gigachat_configured,
     load_gigachat_settings,
     load_settings,
@@ -32,18 +33,26 @@ class ServiceContainer:
 
 def build_service_container() -> ServiceContainer:
     settings = load_settings()
+    analysis_settings = get_analysis_settings()
+    storage_settings = get_storage_settings()
     client_service = TelegramClientService(settings)
     auth_service = TelegramAuthService(client_service)
-    analysis_repository = SqlAlchemyAudienceAnalysisRepository(PROJECT_ROOT / "db" / "channels.db")
+    analysis_repository = SqlAlchemyAudienceAnalysisRepository(
+        storage_settings.resolved_sqlite_db_path
+    )
 
     ai_enhancer = None
     if is_gigachat_configured():
-        ai_enhancer = GigaChatAudienceEnhancer(load_gigachat_settings())
+        ai_enhancer = GigaChatAudienceEnhancer(
+            load_gigachat_settings(),
+            analysis_settings=analysis_settings,
+        )
 
     audience_analyzer = TelegramAudienceAnalyzer(
         client_service,
         ai_enhancer=ai_enhancer,
         analysis_repository=analysis_repository,
+        analysis_settings=analysis_settings,
     )
     return ServiceContainer(
         client_service=client_service,

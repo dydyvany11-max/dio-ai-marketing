@@ -71,6 +71,52 @@ class GigaChatSettings(_BaseProjectSettings):
         return base_url
 
 
+class AppSettings(_BaseProjectSettings):
+    host: str = Field(default="127.0.0.1", alias="API_HOST")
+    port: int = Field(default=8000, alias="API_PORT", ge=1, le=65535)
+    reload: bool = Field(default=False, alias="API_RELOAD")
+
+
+class StorageSettings(_BaseProjectSettings):
+    sqlite_db_path: Path = Field(
+        default_factory=lambda: PROJECT_ROOT / "db" / "channels.db",
+        alias="SQLITE_DB_PATH",
+    )
+
+    @property
+    def resolved_sqlite_db_path(self) -> Path:
+        if self.sqlite_db_path.is_absolute():
+            return self.sqlite_db_path
+        return (PROJECT_ROOT / self.sqlite_db_path).resolve()
+
+
+class AnalysisSettings(_BaseProjectSettings):
+    competitor_search_limit_per_query: int = Field(
+        default=8,
+        alias="ANALYSIS_COMPETITOR_SEARCH_LIMIT_PER_QUERY",
+        ge=1,
+        le=50,
+    )
+    ai_keyword_message_limit: int = Field(
+        default=12,
+        alias="ANALYSIS_AI_KEYWORD_MESSAGE_LIMIT",
+        ge=1,
+        le=100,
+    )
+    ai_keyword_batch_size: int = Field(
+        default=6,
+        alias="ANALYSIS_AI_KEYWORD_BATCH_SIZE",
+        ge=1,
+        le=20,
+    )
+    ai_keyword_text_limit: int = Field(
+        default=120,
+        alias="ANALYSIS_AI_KEYWORD_TEXT_LIMIT",
+        ge=20,
+        le=2000,
+    )
+
+
 @lru_cache(maxsize=1)
 def get_telegram_settings() -> TelegramSettings:
     return TelegramSettings()
@@ -79,6 +125,21 @@ def get_telegram_settings() -> TelegramSettings:
 @lru_cache(maxsize=1)
 def get_gigachat_settings() -> GigaChatSettings:
     return GigaChatSettings()
+
+
+@lru_cache(maxsize=1)
+def get_app_settings() -> AppSettings:
+    return AppSettings()
+
+
+@lru_cache(maxsize=1)
+def get_storage_settings() -> StorageSettings:
+    return StorageSettings()
+
+
+@lru_cache(maxsize=1)
+def get_analysis_settings() -> AnalysisSettings:
+    return AnalysisSettings()
 
 
 def is_telegram_configured() -> bool:

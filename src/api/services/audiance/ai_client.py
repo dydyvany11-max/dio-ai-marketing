@@ -39,7 +39,7 @@ class GigaChatLLMClient:
             auth_url=settings.auth_url,
             verify_ssl_certs=settings.verify_ssl_certs,
             temperature=0.05,
-            profanity=False,
+            profanity_check=False,
         )
 
     def chat_json(self, prompt: str) -> str:

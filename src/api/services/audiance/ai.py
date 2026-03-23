@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from src.api.config import GigaChatSettings
+from src.api.config import AnalysisSettings, GigaChatSettings, get_analysis_settings
 from src.api.services.audiance.ai_client import GigaChatLLMClient
 from src.api.services.audiance.ai_models import AIAudienceInsights, KeywordBatchResult
 from src.api.services.audiance.ai_prompts import (
@@ -23,13 +23,15 @@ from src.api.services.errors import AIEnhancementError
 
 logger = logging.getLogger(__name__)
 
-POST_KEYWORD_BATCH_SIZE = 6
-POST_KEYWORD_TEXT_LIMIT = 120
-
 
 class GigaChatAudienceEnhancer:
-    def __init__(self, settings: GigaChatSettings):
+    def __init__(
+        self,
+        settings: GigaChatSettings,
+        analysis_settings: AnalysisSettings | None = None,
+    ):
         self._client = GigaChatLLMClient(settings)
+        self._analysis_settings = analysis_settings or get_analysis_settings()
 
     def enhance(self, report: TelegramAudienceReport) -> TelegramAudienceReport:
         attempts = [
@@ -87,7 +89,7 @@ class GigaChatAudienceEnhancer:
         prepared = [
             {
                 "index": index,
-                "text": truncate_text(text, POST_KEYWORD_TEXT_LIMIT),
+                "text": truncate_text(text, self._analysis_settings.ai_keyword_text_limit),
             }
             for index, text in enumerate(texts)
             if text and text.strip()
@@ -96,8 +98,9 @@ class GigaChatAudienceEnhancer:
             return {}
 
         result: dict[int, list[str]] = {}
-        for start in range(0, len(prepared), POST_KEYWORD_BATCH_SIZE):
-            batch = prepared[start : start + POST_KEYWORD_BATCH_SIZE]
+        batch_size = self._analysis_settings.ai_keyword_batch_size
+        for start in range(0, len(prepared), batch_size):
+            batch = prepared[start : start + batch_size]
             prompt = build_keyword_batch_prompt(batch)
             try:
                 parsed = self._client.chat_structured(prompt, KeywordBatchResult)
