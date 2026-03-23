@@ -5,7 +5,6 @@ from src.api.services.dto import (
     AuthStatus,
     AuthorizedUser,
     CompetitorDiscoveryReport,
-    GigaChatStatus,
     QRCodePayload,
     TelegramAudienceReport,
 )
@@ -42,15 +41,9 @@ class AudienceAnalyzerPort(Protocol):
     async def compare_competitors(
         self,
         source: str,
-        candidate_sources: list[str],
         message_limit: int = 100,
         top_k: int = 5,
     ) -> CompetitorDiscoveryReport:
-        ...
-
-
-class AIStatusPort(Protocol):
-    def get_status(self) -> GigaChatStatus:
         ...
 
 

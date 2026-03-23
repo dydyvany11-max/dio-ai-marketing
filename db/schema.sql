@@ -47,41 +47,6 @@ CREATE TABLE IF NOT EXISTS audience_reports (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Content generation
-CREATE TABLE IF NOT EXISTS content_briefs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  topic text NOT NULL,
-  tone text,
-  prompt text,
-  knowledge_base_refs jsonb NOT NULL DEFAULT '[]'::jsonb,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS generated_content (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  brief_id uuid NOT NULL REFERENCES content_briefs(id) ON DELETE CASCADE,
-  content_type text NOT NULL CHECK (content_type IN ('text','image','video_script')),
-  payload_json jsonb NOT NULL DEFAULT '{}'::jsonb,
-  platform_variant text,
-  quality_score numeric(5,2),
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
--- Posts and scheduling
-CREATE TABLE IF NOT EXISTS post_drafts (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  platform text NOT NULL CHECK (platform IN ('vk','telegram')),
-  source_id text NOT NULL,
-  content_id uuid NOT NULL REFERENCES generated_content(id) ON DELETE CASCADE,
-  scheduled_at timestamptz,
-  status text NOT NULL DEFAULT 'draft',
-  external_post_id text,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-
 -- Account reports
 CREATE TABLE IF NOT EXISTS account_reports (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -134,6 +99,5 @@ CREATE TABLE IF NOT EXISTS charts (
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_social_accounts_project ON social_accounts(project_id);
 CREATE INDEX IF NOT EXISTS idx_audience_reports_project ON audience_reports(project_id);
-CREATE INDEX IF NOT EXISTS idx_post_drafts_project ON post_drafts(project_id);
 CREATE INDEX IF NOT EXISTS idx_account_reports_project ON account_reports(project_id);
 CREATE INDEX IF NOT EXISTS idx_reports_project ON reports(project_id);

@@ -195,6 +195,10 @@ THEME_SUBTOPIC_PATTERNS = {
         "politics": ("election", "sanction", "government", "president", "minister"),
         "international": ("nato", "eu", "conflict", "geopolit", "diplomat"),
         "breaking news": ("breaking", "digest", "report", "exclusive", "urgent"),
+        "economy news": ("econom", "inflation", "rate", "bank", "currency", "market", "stock", "gdp"),
+        "gaming news": ("game", "gaming", "gamer", "playstation", "xbox", "nintendo", "steam", "patch", "dlc", "esports"),
+        "technology news": ("ai", "ml", "llm", "openai", "startup", "tech", "software", "apple", "google", "microsoft"),
+        "incident news": ("accident", "explosion", "fire", "emergency", "attack", "crash", "disaster", "police"),
     },
     "humor_memes": {
         "memes": ("meme", "lol", "kek", "rofl", "joke"),
@@ -293,6 +297,10 @@ THEME_SUBTOPIC_PATTERNS.update(
             "politics": ("election", "sanction", "government", "president", "minister", "выборы", "санкции", "правительство"),
             "international": ("nato", "eu", "conflict", "geopolit", "diplomat", "геополитика", "переговоры", "конфликт"),
             "breaking news": ("breaking", "digest", "report", "exclusive", "urgent", "срочно", "сводка", "дайджест"),
+            "economy news": ("econom", "inflation", "rate", "bank", "currency", "market", "stock", "gdp", "экономика", "инфляция", "ставка", "банк", "рынок", "акции", "биржа"),
+            "gaming news": ("game", "gaming", "gamer", "playstation", "xbox", "nintendo", "steam", "patch", "dlc", "esports", "игры", "гейминг", "игровой", "патч", "обновление", "плейстейшн", "нинтендо"),
+            "technology news": ("ai", "ml", "llm", "openai", "startup", "tech", "software", "apple", "google", "microsoft", "технологии", "тех", "нейросеть", "ии", "стартап", "софт"),
+            "incident news": ("accident", "explosion", "fire", "emergency", "attack", "crash", "disaster", "police", "чп", "происшествие", "взрыв", "пожар", "авария", "атака", "полиция"),
         },
         "humor_memes": {
             "memes": ("meme", "мем", "мемас", "жиза", "ор", "ору", "щитпост"),

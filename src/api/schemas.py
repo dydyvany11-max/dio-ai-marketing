@@ -28,37 +28,12 @@ class AudienceAnalyzeRequest(BaseModel):
 
 
 class AudienceCompetitorsRequest(BaseModel):
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "source": "https://t.me/Cbpub",
-                "candidate_sources": [
-                    "https://t.me/mediyca",
-                    "https://t.me/raiznews",
-                    "https://t.me/paritet_development",
-                ],
-                "message_limit": 100,
-                "top_k": 5,
-            }
-        }
-    )
+    model_config = ConfigDict(json_schema_extra={"example": {"source": "https://t.me/Cbpub"}})
 
     source: str = Field(
         description="Ссылка на канал/группу, @username или ID Telegram-источника",
         examples=["https://t.me/Cbpub", "@Cbpub", "1135818819"],
     )
-    candidate_sources: list[str] = Field(
-        min_length=1,
-        max_length=30,
-        description="Список каналов-кандидатов для сравнения с основным источником",
-    )
-    message_limit: int = Field(
-        default=100,
-        ge=1,
-        le=500,
-        description="Сколько последних сообщений анализировать у каждого канала",
-    )
-    top_k: int = Field(default=5, ge=1, le=20, description="Сколько лучших совпадений вернуть")
 
 
 class GigaChatStatusResponse(BaseModel):
@@ -84,9 +59,6 @@ class AudienceCompetitorsInputResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     source: str
-    candidate_sources: list[str]
-    message_limit: int
-    top_k: int
 
 
 class AudienceClusterResponse(BaseModel):
@@ -184,5 +156,6 @@ class CompetitorDiscoveryResponse(BaseModel):
 
     input: AudienceCompetitorsInputResponse
     source: AudienceSourceResponse
+    discovered_candidates: list[str]
     competitors: list[CompetitorMatchResponse]
     failed_candidates: list[CompetitorFailureResponse]

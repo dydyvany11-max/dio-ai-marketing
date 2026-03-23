@@ -1,11 +1,9 @@
 import asyncio
-import io
-from dataclasses import dataclass
 from typing import Optional
 
-import qrcode
 from telethon.errors import SessionPasswordNeededError
 
+from src.api.services.auth_support import QRCodeRenderer, QRLoginState
 from src.api.services.dto import AuthStatus, AuthorizedUser, QRCodePayload
 from src.api.services.errors import (
     AlreadyAuthorizedError,
@@ -15,19 +13,18 @@ from src.api.services.errors import (
 from src.api.services.telegram_client import TelegramClientService
 
 
-@dataclass
-class _QRStatusState:
-    pending: bool = False
-    expires_at: str | None = None
-    error: str | None = None
-
-
 class TelegramAuthService:
-    def __init__(self, client_service: TelegramClientService):
+    def __init__(
+        self,
+        client_service: TelegramClientService,
+        *,
+        qr_renderer: QRCodeRenderer | None = None,
+    ):
         self._client_service = client_service
+        self._qr_renderer = qr_renderer or QRCodeRenderer()
         self._qr_login_obj = None
         self._qr_wait_task: Optional[asyncio.Task] = None
-        self._qr_state = _QRStatusState()
+        self._qr_state = QRLoginState()
 
     async def get_status(self) -> AuthStatus:
         await self._client_service.ensure_connected()
@@ -47,7 +44,7 @@ class TelegramAuthService:
 
     async def create_qr_payload(self) -> QRCodePayload:
         login_url, expires_at = await self._start_qr_login()
-        image_bytes = self._build_qr_png(login_url)
+        image_bytes = self._qr_renderer.render_png(login_url)
         return QRCodePayload(
             image_bytes=image_bytes,
             login_url=login_url,
@@ -113,18 +110,6 @@ class TelegramAuthService:
         except Exception as exc:
             self._qr_state.pending = False
             self._qr_state.error = str(exc)
-
-    @staticmethod
-    def _build_qr_png(content: str) -> bytes:
-        qr = qrcode.QRCode(box_size=10, border=2)
-        qr.add_data(content)
-        qr.make(fit=True)
-
-        img = qr.make_image(fill_color="black", back_color="white")
-        buffer = io.BytesIO()
-        img.save(buffer, format="PNG")
-        buffer.seek(0)
-        return buffer.read()
 
     @staticmethod
     def _to_authorized_user(me) -> AuthorizedUser:

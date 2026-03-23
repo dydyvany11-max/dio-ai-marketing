@@ -129,6 +129,7 @@ class CompetitorFailure:
 @dataclass(frozen=True)
 class CompetitorDiscoveryReport:
     source: AudienceSource
+    discovered_candidates: list[str]
     competitors: list[CompetitorMatch]
     failed_candidates: list[CompetitorFailure]
 
@@ -155,4 +156,3 @@ class AudienceAnalysisSnapshot:
     dominant_theme_label: str
     summary: str
     report_payload: dict[str, Any]
-    generation_payload: dict[str, Any]

@@ -3,31 +3,14 @@ import os
 
 from fastapi import FastAPI
 
-from src.api.config import is_telegram_configured
-from src.api.dependencies import get_client_service
-from src.api.routers.audience import router as audience_router
-from src.api.routers.auth import router as auth_router
-from src.api.routers.system import router as system_router
+from src.api.app_setup import configure_lifecycle, configure_routes
 logger = logging.getLogger(__name__)
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="DIO AI Marketing API")
-
-    app.include_router(system_router)
-
-    if is_telegram_configured():
-        @app.on_event("shutdown")
-        async def shutdown() -> None:
-            await get_client_service().disconnect()
-
-        app.include_router(auth_router)
-        app.include_router(audience_router)
-    else:
-        logger.warning(
-            "Telegram routers disabled: set TG_API_ID and TG_API_HASH in .env"
-        )
-
+    configure_routes(app)
+    configure_lifecycle(app)
     return app
 
 

@@ -4,10 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from src.api.dependencies import get_auth_service
+from src.api.http_errors import raise_auth_http_error
+from src.api.response_builders import (
+    build_auth_success_response,
+    build_current_user_response,
+    build_qr_status_response,
+)
 from src.api.schemas import PasswordRequest, QRStatusResponse
 from src.api.services.errors import (
     AlreadyAuthorizedError,
-    AuthorizationRequiredError,
     TelegramOperationError,
 )
 from src.api.services.interfaces import AuthServicePort
@@ -24,14 +29,9 @@ router = APIRouter(prefix="/tg", tags=["Telegram: авторизация"])
 async def tg_auth_status(auth_service: AuthServicePort = Depends(get_auth_service)):
     try:
         status = await auth_service.get_status()
-    except TelegramOperationError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    return QRStatusResponse(
-        authorized=status.authorized,
-        pending=status.pending,
-        expires_at=status.expires_at,
-        error=status.error,
-    )
+    except Exception as exc:
+        raise_auth_http_error(exc, status_code_for_telegram_error=503)
+    return build_qr_status_response(status)
 
 
 @router.get(
@@ -44,8 +44,8 @@ async def tg_auth_qr(auth_service: AuthServicePort = Depends(get_auth_service)):
         payload = await auth_service.create_qr_payload()
     except AlreadyAuthorizedError:
         return {"authorized": True, "message": "Already authorized"}
-    except TelegramOperationError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise_auth_http_error(exc, status_code_for_telegram_error=503)
 
     return StreamingResponse(
         io.BytesIO(payload.image_bytes),
@@ -67,8 +67,8 @@ async def tg_auth_qr_url(auth_service: AuthServicePort = Depends(get_auth_servic
         login_url, expires_at = await auth_service.create_qr_url()
     except AlreadyAuthorizedError:
         return {"authorized": True, "message": "Already authorized"}
-    except TelegramOperationError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise_auth_http_error(exc, status_code_for_telegram_error=503)
 
     return {
         "authorized": False,
@@ -94,17 +94,10 @@ async def tg_auth_password(
         user = await auth_service.authorize_with_password(payload.password)
     except AlreadyAuthorizedError:
         return {"message": "already authorized"}
-    except TelegramOperationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise_auth_http_error(exc, status_code_for_telegram_error=400)
 
-    return {
-        "status": "authorized",
-        "user": {
-            "id": user.user_id,
-            "username": user.username,
-            "name": user.first_name,
-        },
-    }
+    return build_auth_success_response(user)
 
 
 @router.get(
@@ -115,15 +108,7 @@ async def tg_auth_password(
 async def tg_me(auth_service: AuthServicePort = Depends(get_auth_service)):
     try:
         user = await auth_service.get_current_user()
-    except AuthorizationRequiredError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    except TelegramOperationError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise_auth_http_error(exc, status_code_for_telegram_error=503)
 
-    return {
-        "id": user.user_id,
-        "username": user.username,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
-        "phone": user.phone,
-    }
+    return build_current_user_response(user)

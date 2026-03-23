@@ -5,27 +5,17 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from src.api.dependencies import get_audience_analyzer, get_gigachat_status
-from src.api.schemas import (
-    AudienceAnalyzeInputResponse,
-    AudienceAnalyzeRequest,
-    AudienceClusteringResponse,
-    AudienceCompetitorsInputResponse,
-    AudienceCompetitorsRequest,
-    CompetitorDiscoveryResponse,
-    CompetitorFailureResponse,
-    CompetitorMatchResponse,
-    GigaChatStatusResponse,
-    TelegramAudienceReportResponse,
+from src.api.http_errors import raise_audience_http_error
+from src.api.response_builders import (
+    build_audience_report_response,
+    build_competitor_discovery_response,
+    build_gigachat_status_response,
 )
+from src.api.schemas import AudienceAnalyzeRequest, AudienceCompetitorsRequest, CompetitorDiscoveryResponse, GigaChatStatusResponse, TelegramAudienceReportResponse
 from src.api.services.audiance.dashboards import (
     build_audience_dashboard,
     build_competitors_dashboard,
     dashboards_available,
-)
-from src.api.services.errors import (
-    AIEnhancementError,
-    AuthorizationRequiredError,
-    TelegramOperationError,
 )
 from src.api.services.interfaces import AudienceAnalyzerPort
 
@@ -49,44 +39,13 @@ async def analyze_audience(
             message_limit=payload.message_limit,
         )
         status = get_gigachat_status()
-        return TelegramAudienceReportResponse(
-            input=AudienceAnalyzeInputResponse(
-                source=payload.source,
-                message_limit=payload.message_limit,
-            ),
-            ai=GigaChatStatusResponse(
-                enabled=status.enabled,
-                available=status.available,
-                enhanced=report.ai_enhanced,
-                provider=status.provider,
-                model=status.model,
-                auth_mode=status.auth_mode,
-                message=report.ai_message or status.message,
-            ),
-            source=report.source,
-            clustering=AudienceClusteringResponse(
-                interest_clusters=report.interest_clusters,
-                dominant_theme=report.dominant_theme,
-            ),
-            audience_persona=report.audience_persona,
-            engagement_metrics={
-                "average_views": report.engagement_metrics.average_views,
-                "average_forwards": report.engagement_metrics.average_forwards,
-                "average_reactions": report.engagement_metrics.average_reactions,
-                "posts_per_day": report.engagement_metrics.posts_per_day,
-            },
-            summary=report.summary,
-            limitations=report.limitations,
-        )
-    except AuthorizationRequiredError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    except AIEnhancementError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except TelegramOperationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return build_audience_report_response(payload, report, status)
     except Exception as exc:
-        logger.exception("Audience analysis failed")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise_audience_http_error(
+            exc,
+            logger=logger,
+            unexpected_log_message="Audience analysis failed",
+        )
 
 
 @router.post(
@@ -112,15 +71,12 @@ async def analyze_audience_dashboard(
             media_type="image/png",
             headers={"Content-Disposition": 'inline; filename="audience-dashboard.png"'},
         )
-    except AuthorizationRequiredError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    except AIEnhancementError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except TelegramOperationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        logger.exception("Audience dashboard build failed")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise_audience_http_error(
+            exc,
+            logger=logger,
+            unexpected_log_message="Audience dashboard build failed",
+        )
 
 
 @router.post(
@@ -136,44 +92,14 @@ async def find_audience_competitors(
     try:
         result = await audience_analyzer.compare_competitors(
             source=payload.source,
-            candidate_sources=payload.candidate_sources,
-            message_limit=payload.message_limit,
-            top_k=payload.top_k,
         )
-        return CompetitorDiscoveryResponse(
-            input=AudienceCompetitorsInputResponse(
-                source=payload.source,
-                candidate_sources=payload.candidate_sources,
-                message_limit=payload.message_limit,
-                top_k=payload.top_k,
-            ),
-            source=result.source,
-            competitors=[
-                CompetitorMatchResponse(
-                    source=item.source,
-                    match_percent=round(item.similarity_score * 100, 1),
-                    competitor_type=item.relation_type,
-                    common_topics=item.matched_themes,
-                    common_content_signals=item.matched_keywords,
-                    why_it_matched=item.reason,
-                    limitations=item.disqualifiers,
-                )
-                for item in result.competitors
-            ],
-            failed_candidates=[
-                CompetitorFailureResponse(source=item.source, error=item.error)
-                for item in result.failed_candidates
-            ],
-        )
-    except AuthorizationRequiredError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    except AIEnhancementError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except TelegramOperationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return build_competitor_discovery_response(payload, result)
     except Exception as exc:
-        logger.exception("Competitor discovery failed")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise_audience_http_error(
+            exc,
+            logger=logger,
+            unexpected_log_message="Competitor discovery failed",
+        )
 
 
 @router.post(
@@ -191,9 +117,6 @@ async def find_audience_competitors_dashboard(
     try:
         result = await audience_analyzer.compare_competitors(
             source=payload.source,
-            candidate_sources=payload.candidate_sources,
-            message_limit=payload.message_limit,
-            top_k=payload.top_k,
         )
         image_bytes = build_competitors_dashboard(result)
         return StreamingResponse(
@@ -201,15 +124,12 @@ async def find_audience_competitors_dashboard(
             media_type="image/png",
             headers={"Content-Disposition": 'inline; filename="competitors-dashboard.png"'},
         )
-    except AuthorizationRequiredError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    except AIEnhancementError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except TelegramOperationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        logger.exception("Competitor dashboard build failed")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise_audience_http_error(
+            exc,
+            logger=logger,
+            unexpected_log_message="Competitor dashboard build failed",
+        )
 
 
 @router.get(
@@ -220,12 +140,4 @@ async def find_audience_competitors_dashboard(
 )
 async def tg_ai_status():
     status = get_gigachat_status()
-    return GigaChatStatusResponse(
-        enabled=status.enabled,
-        available=status.available,
-        enhanced=False,
-        provider=status.provider,
-        model=status.model,
-        auth_mode=status.auth_mode,
-        message=status.message,
-    )
+    return build_gigachat_status_response(status, enhanced=False)
