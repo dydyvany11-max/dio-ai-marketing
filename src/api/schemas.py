@@ -480,33 +480,7 @@ class VKAudienceReportResponse(BaseModel):
 
 class VKPublishRequest(BaseModel):
 
-    access_token: str | None = Field(
-        default=None,
-        description="VK access_token (optional, server uses saved token)"
-    )
-
-    group_id: int = Field(description="ID группы")
-
-    message: str = Field(default="", description="Текст поста")
-
-    attachments: str | None = Field(
-
-        default=None,
-
-        description="Строка вложений VK, например 'photo1_1,photo1_2'",
-
-    )
-
-    publish_date: int | None = Field(
-
-        default=None,
-
-        description="Unix timestamp для отложенной публикации",
-
-    )
-
-
-
+    message: str = Field(default="", description="?????????? ??????????")
 
 
 class VKPublishResponse(BaseModel):
@@ -515,6 +489,243 @@ class VKPublishResponse(BaseModel):
 
     owner_id: int = Field(description="Owner ID (группа = отрицательный)")
 
+
+
+class VKKnowledgeBaseUploadRequest(BaseModel):
+
+    name: str = Field(description="Knowledge base title")
+
+    content: str = Field(description="Knowledge base content (rules, templates, ideas)")
+
+    language: str = Field(default="ru", description="Knowledge base language")
+
+
+class VKKnowledgeBaseItemResponse(BaseModel):
+
+    id: str = Field(description="Knowledge base id")
+
+    name: str = Field(description="Knowledge base title")
+
+    language: str = Field(description="Knowledge base language")
+
+    content_length: int = Field(description="Stored content length")
+
+    created_at: str | None = Field(default=None, description="Created at (ISO)")
+
+    updated_at: str | None = Field(default=None, description="Updated at (ISO)")
+
+    is_active: bool = Field(default=False, description="Is active knowledge base")
+
+
+class VKKnowledgeBaseUploadResponse(BaseModel):
+
+    item: VKKnowledgeBaseItemResponse
+
+
+class VKKnowledgeBaseListResponse(BaseModel):
+
+    items: list[VKKnowledgeBaseItemResponse]
+
+
+class VKAIPostRequest(BaseModel):
+
+    prompt: str = Field(description="Prompt for post generation")
+
+    theme: str | None = Field(default=None, description="Post theme/topic")
+
+    tone: str | None = Field(default=None, description="Tone of voice")
+
+    content_type: str = Field(
+        default="text",
+        description="Content type: text, story, image, video",
+    )
+
+    publish: bool = Field(default=False, description="Publish immediately if true")
+
+    length: str = Field(
+        default="medium",
+        description="Desired length: short, medium, long",
+    )
+
+    language: str = Field(default="ru", description="Output language")
+
+
+class VKAIPostResponse(BaseModel):
+
+    text: str = Field(description="Generated post text")
+
+    content_type: str = Field(description="Generated content type")
+
+    published: bool = Field(description="Was post published")
+
+    post_id: int | None = Field(default=None, description="VK post ID if published")
+
+    owner_id: int | None = Field(default=None, description="VK owner ID if published")
+
+    char_count: int = Field(description="Characters count")
+
+    word_count: int = Field(description="Words count")
+
+    token_estimate: int = Field(description="Rough token estimate (~4 chars per token)")
+
+    token_estimate_method: str = Field(description="Token estimation method")
+
+    theme: str | None = Field(default=None, description="Applied theme")
+
+    tone: str | None = Field(default=None, description="Applied tone")
+
+    story_frames: list[str] = Field(default_factory=list, description="Story slides/frames if content_type=story")
+
+    image_prompt: str | None = Field(default=None, description="Image generation prompt if content_type=image")
+
+    video_script: str | None = Field(default=None, description="Video script if content_type=video")
+
+    knowledge_base_id: str | None = Field(default=None, description="Used knowledge base id")
+
+    knowledge_base_name: str | None = Field(default=None, description="Used knowledge base title")
+
+
+class VKGroupAnalyzeRequest(BaseModel):
+
+    source: str = Field(description="Group link, screen_name or ID")
+
+    post_limit: int = Field(default=50, ge=1, le=100, description="How many posts to analyze")
+
+    language: str = Field(default="ru", description="Output language")
+
+
+class VKGroupAIInsights(BaseModel):
+
+    audience_interests: list[str] = Field(description="Interest clusters")
+
+    audience_age: list[str] = Field(description="Age clusters")
+
+    audience_activity: list[str] = Field(description="Activity clusters")
+
+    potential_competitors: list[str] = Field(description="Likely competitors")
+
+    summary: str = Field(description="Short summary")
+
+    limitations: list[str] = Field(description="Limitations and assumptions")
+
+
+class VKTopicClusterResponse(BaseModel):
+
+    label: str = Field(description="Human-readable cluster label")
+
+    size: int = Field(description="How many posts belong to the cluster")
+
+    terms: list[str] = Field(description="Top cluster terms")
+
+    sample_titles: list[str] = Field(description="Example post titles")
+
+    sample_urls: list[str] = Field(description="Example source URLs")
+
+
+class VKCompetitorFoundResponse(BaseModel):
+
+    group_id: int = Field(description="VK group ID")
+
+    name: str = Field(description="VK group name")
+
+    screen_name: str | None = Field(default=None, description="VK screen name")
+
+    members_count: int | None = Field(default=None, description="Members count if available")
+
+    activity: str | None = Field(default=None, description="Group activity/category")
+
+    matched_by: list[str] = Field(description="Cluster terms that matched this competitor")
+
+    shared_topics: list[str] = Field(description="Shared topic labels with the analyzed group")
+
+    why_similar: str = Field(description="Why this group is considered similar")
+
+    similarity_score: float = Field(description="Heuristic similarity score from 0 to 1")
+
+
+class VKAnalyticsSourceResponse(BaseModel):
+
+    platform: str = Field(description="Platform identifier")
+
+    group_id: int = Field(description="VK group ID")
+
+    name: str = Field(description="VK group name")
+
+    screen_name: str | None = Field(default=None, description="VK screen name")
+
+    url: str = Field(description="Canonical public URL")
+
+    members_count: int | None = Field(default=None, description="Members count if available")
+
+    activity: str | None = Field(default=None, description="VK category/activity")
+
+    description: str | None = Field(default=None, description="VK group description")
+
+    site: str | None = Field(default=None, description="Linked site from VK if present")
+
+
+class VKAudienceProfileResponse(BaseModel):
+
+    interests: list[str] = Field(description="Interest profile")
+
+    age_segments: list[str] = Field(description="Estimated age segments")
+
+    activity_profile: list[str] = Field(description="Posting and engagement behavior")
+
+    content_preferences: list[str] = Field(description="Preferred content formats and themes")
+
+    engagement_style: list[str] = Field(description="How the audience tends to react to content")
+
+    summary: str = Field(description="Audience profile summary")
+
+
+class VKAnalyticsRecommendationResponse(BaseModel):
+
+    title: str = Field(description="Short recommendation title")
+
+    action: str = Field(description="Recommended action")
+
+    rationale: str = Field(description="Why this recommendation follows from the analytics")
+
+
+class VKGroupMetricsResponse(BaseModel):
+
+    average_views: int
+
+    average_likes: int
+
+    average_comments: int
+
+    average_reposts: int
+
+    posts_per_day: float
+
+    total_posts_analyzed: int
+
+    top_posts: list[VKPostMetricsResponse]
+
+    limitations: list[str]
+
+
+class VKGroupAnalyzeResponse(BaseModel):
+
+    source: VKAnalyticsSourceResponse
+
+    group: VKGroupInfoResponse
+
+    metrics: VKGroupMetricsResponse
+
+    ai: VKGroupAIInsights
+
+    audience_profile: VKAudienceProfileResponse
+
+    topic_clusters: list[VKTopicClusterResponse]
+
+    competitors_found: list[VKCompetitorFoundResponse]
+
+    recommendations: list[VKAnalyticsRecommendationResponse]
+
+    ai_status: GigaChatStatusResponse
 
 
 class TrendItem(BaseModel):

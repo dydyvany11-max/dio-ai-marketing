@@ -69,6 +69,15 @@ class VKAudienceAnalyzer:
         normalized = self._normalize_source(source)
         params = {"group_id": normalized, "fields": "members_count,screen_name,name"}
         response = self._vk.call_api("groups.getById", access_token, **params)
+        if isinstance(response, dict):
+            if "groups" in response and isinstance(response.get("groups"), list):
+                response = response.get("groups")
+            elif "response" in response:
+                payload = response.get("response")
+                if isinstance(payload, dict) and "groups" in payload:
+                    response = payload.get("groups")
+                else:
+                    response = payload
         if not response:
             raise VKOperationError("VK group not found")
         group = response[0]

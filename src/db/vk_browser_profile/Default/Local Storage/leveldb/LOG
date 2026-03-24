@@ -1,0 +1,10 @@
+2026/03/24-11:24:47.613 4fa0 Reusing MANIFEST C:\Users\Evan\Desktop\Work(DIO)\Projects\dio-ai-marketing\src\db\vk_browser_profile\Default\Local Storage\leveldb/MANIFEST-000001
+2026/03/24-11:24:47.618 4fa0 Recovering log #61
+2026/03/24-11:24:47.623 4fa0 Level-0 table #64: started
+2026/03/24-11:24:47.632 4fa0 Level-0 table #64: 511317 bytes OK
+2026/03/24-11:24:47.633 4fa0 Recovering log #64
+2026/03/24-11:24:47.633 4fa0 Reusing old log C:\Users\Evan\Desktop\Work(DIO)\Projects\dio-ai-marketing\src\db\vk_browser_profile\Default\Local Storage\leveldb/000064.log 
+2026/03/24-11:24:47.634 4fa0 Delete type=0 #61
+2026/03/24-11:24:47.634 4fa0 Delete type=2 #65
+2026/03/24-11:24:55.613 3f3c Level-0 table #66: started
+2026/03/24-11:24:55.625 3f3c Level-0 table #66: 509311 bytes OK

@@ -124,6 +124,15 @@ class VKClient:
         except Exception as exc:
             raise VKOperationError(f"VK API request failed: {exc}") from exc
 
+    def resolve_screen_name(self, access_token: str, screen_name: str) -> dict[str, Any]:
+        value = (screen_name or "").strip().lstrip("@")
+        if not value:
+            raise VKOperationError("VK source is empty")
+        response = self.call_api("utils.resolveScreenName", access_token, screen_name=value)
+        if not isinstance(response, dict):
+            raise VKOperationError("VK returned unexpected resolveScreenName response")
+        return response
+
     @staticmethod
     def _encode_params(params: dict[str, Any]) -> str:
         return "&".join(f"{key}={requests.utils.quote(str(value))}" for key, value in params.items())
