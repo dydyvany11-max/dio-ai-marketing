@@ -15,13 +15,6 @@ DEFAULT_ENV_FILES = (
 
 
 @dataclass(frozen=True)
-class TelegramSettings:
-    api_id: int
-    api_hash: str
-    session_path: str
-
-
-@dataclass(frozen=True)
 class VKSettings:
     app_id: int
     app_secret: str
@@ -65,19 +58,6 @@ def _load_project_env() -> None:
             load_dotenv(env_path, override=False)
 
 
-def is_telegram_configured() -> bool:
-    _load_project_env()
-    api_id_raw = os.getenv("TG_API_ID", "").strip()
-    api_hash = os.getenv("TG_API_HASH", "").strip()
-
-    try:
-        api_id = int(api_id_raw)
-    except (TypeError, ValueError):
-        return False
-
-    return api_id > 0 and bool(api_hash)
-
-
 def is_gigachat_configured() -> bool:
     _load_project_env()
     return bool(
@@ -113,24 +93,6 @@ def is_vkid_configured() -> bool:
         return False
 
     return app_id > 0 and bool(redirect_uri)
-
-
-def load_settings() -> TelegramSettings:
-    _load_project_env()
-
-    api_id = int(os.getenv("TG_API_ID", "0"))
-    api_hash = os.getenv("TG_API_HASH", "")
-    session_name = os.getenv("TG_SESSION_NAME", "tg_session")
-
-    if not api_id or not api_hash:
-        raise RuntimeError("Set TG_API_ID and TG_API_HASH in .env")
-
-    session_path = str((PROJECT_ROOT / session_name).resolve())
-    return TelegramSettings(
-        api_id=api_id,
-        api_hash=api_hash,
-        session_path=session_path,
-    )
 
 
 def load_vk_settings() -> VKSettings:

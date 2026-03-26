@@ -393,6 +393,8 @@ def _collect_visible_posts(
         comments = int(html_metrics.get("comments") or parsed["comments"])
         reposts = int(html_metrics.get("reposts") or parsed["reposts"])
         views = int(html_metrics.get("views") or parsed["views"])
+        if views > 100_000_000:
+            views = 0
 
         posts.append(
             PublicVKPost(
@@ -582,28 +584,34 @@ def _parse_metric_value(value: str) -> int:
     if not text:
         return 0
 
-    mult = 1
-    if any(suffix in text for suffix in {"k", "к", "тыс"}):
-        mult = 1_000
-    if any(suffix in text for suffix in {"m", "м", "млн"}):
-        mult = 1_000_000
-
     compact = re.search(r"\b(\d{1,3}(?:\s\d{3})+)\b", text)
     if compact:
         try:
-            return int(compact.group(1).replace(" ", ""))
+            parsed = int(compact.group(1).replace(" ", ""))
+            return parsed if parsed <= 100_000_000 else 0
         except ValueError:
             pass
 
-    match = re.search(r"(\d+(?:[.,]\d+)?)", text)
+    match = re.search(r"(\d+(?:[.,]\d+)?)\s*(k|к|тыс|m|м|млн)?\b", text)
     if not match:
         return 0
     raw = match.group(1).replace(",", ".")
+    unit = (match.group(2) or "").strip()
     try:
         number = float(raw)
     except ValueError:
         return 0
-    return int(number * mult)
+
+    multiplier = 1
+    if unit in {"k", "к", "тыс"}:
+        multiplier = 1_000
+    elif unit in {"m", "м", "млн"}:
+        multiplier = 1_000_000
+
+    parsed = int(number * multiplier)
+    if parsed > 100_000_000:
+        return 0
+    return parsed
 
 
 def _looks_like_ui_text(text: str) -> bool:
@@ -617,6 +625,12 @@ def _looks_like_ui_text(text: str) -> bool:
         "свайп",
         "играть",
         "play",
+        "leave comment",
+        "leave a comment",
+        "this video has been unavailable because",
+        "oldest",
+        "most interesting",
+        "view replies",
     }
     if any(phrase in value for phrase in bad_phrases):
         return True

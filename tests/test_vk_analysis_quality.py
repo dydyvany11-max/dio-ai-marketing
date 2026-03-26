@@ -38,10 +38,10 @@ def test_local_vk_insights_filters_ui_noise_and_builds_topics():
         metrics=metrics,
     )
 
-    assert status["provider"] == "local-clustering"
-    assert payload["topic_clusters"]
-    flat_terms = [term for cluster in payload["topic_clusters"] for term in cluster.get("terms", [])]
-    assert all("slide" not in term for term in flat_terms)
+    assert status["provider"] == "local-heuristics"
+    assert payload["topic_clusters"] == []
+    assert payload["search_tags"]
+    assert all("slide" not in term for term in payload["search_tags"])
     assert payload["audience_interests"]
 
 
@@ -100,7 +100,7 @@ def test_local_vk_insights_drop_media_slug_noise_terms():
         metrics=metrics,
     )
 
-    terms = {term for cluster in payload["topic_clusters"] for term in cluster.get("terms", [])}
+    terms = set(payload["search_tags"])
     assert "ffmvideos" not in terms
     assert "fastfoodmusic" not in terms
 
@@ -278,7 +278,7 @@ def test_fetch_from_context_skips_empty_first_url(monkeypatch):
     assert calls["n"] == 2
 
 
-def test_competitor_search_query_hit_fallback_when_overlap_is_sparse(monkeypatch):
+def test_competitor_search_drops_query_only_matches_without_overlap(monkeypatch):
     class _FakeVKClient:
         def call_api(self, method, access_token, **kwargs):  # noqa: ANN001
             if method == "groups.search":
@@ -286,8 +286,8 @@ def test_competitor_search_query_hit_fallback_when_overlap_is_sparse(monkeypatch
                     "items": [
                         {
                             "id": 101,
-                            "name": "Rap Music Daily",
-                            "screen_name": "rap_music_daily",
+                            "name": "Spartak Football",
+                            "screen_name": "spartak_football",
                             "members_count": 120000,
                             "activity": "",
                             "description": "",
@@ -314,8 +314,7 @@ def test_competitor_search_query_hit_fallback_when_overlap_is_sparse(monkeypatch
         limit=5,
     )
 
-    assert result, "expected competitor from query-hit fallback"
-    assert result[0]["screen_name"] == "rap_music_daily"
+    assert result == []
 
 
 def test_search_public_groups_http_parses_vk_links(monkeypatch):

@@ -30,12 +30,19 @@ class VKGeneratedContent(BaseModel):
 
 
 class VKGroupInsights(BaseModel):
+    class Recommendation(BaseModel):
+        title: str
+        action: str
+        rationale: str
+
     audience_interests: list[str]
     audience_age: list[str]
     audience_activity: list[str]
     potential_competitors: list[str]
+    search_tags: list[str] = Field(default_factory=list)
     summary: str
     limitations: list[str]
+    recommendations: list[Recommendation] = Field(default_factory=list)
 
 
 class GigaChatVKClient:
@@ -69,45 +76,78 @@ class GigaChatVKClient:
             "context": context or {},
         }
         length_hint = {
-            "short": "300-500 characters",
-            "medium": "600-900 characters",
-            "long": "1000-1500 characters",
-        }.get(length, "600-900 characters")
-        tone_hint = (tone or "").strip() or "neutral"
+            "short": "300-500 символов",
+            "medium": "600-900 символов",
+            "long": "1000-1500 символов",
+        }.get(length, "600-900 символов")
+        tone_hint = (tone or "").strip() or "нейтральный"
         content_rules = {
-            "text": "Generate a regular social post.",
-            "story": "Generate story content with 3-6 short frames in story_frames and concise text as story caption.",
-            "image": "Generate post text + detailed image_prompt describing composition, style, mood, and key objects.",
-            "video": "Generate post text + detailed video_script (short scenes, hooks, CTA).",
+            "text": "Сгенерируй обычный пост для соцсети.",
+            "story": "Сгенерируй контент для сторис: 3-6 коротких кадров в story_frames и короткий текст-подпись.",
+            "image": "Сгенерируй текст поста и детальный image_prompt (композиция, стиль, настроение, ключевые объекты).",
+            "video": "Сгенерируй текст поста и детальный video_script (сцены, хук, CTA).",
         }[requested_type]
         full_prompt = (
-            "You are a social media editor for VK.\n"
-            "Return ONLY valid JSON, no markdown.\n"
-            f"Target length: {length_hint}.\n"
-            f"Tone of voice: {tone_hint}.\n"
-            f"Requested content type: {requested_type}.\n"
+            "Ты редактор контента для ВКонтакте.\n"
+            "Верни ТОЛЬКО валидный JSON, без markdown.\n"
+            f"Целевая длина: {length_hint}.\n"
+            f"Тон: {tone_hint}.\n"
+            f"Тип контента: {requested_type}.\n"
             f"{content_rules}\n"
-            "Use 2-4 short paragraphs, no hashtags, no emojis, no links.\n"
-            f"Write in language: {language}.\n\n"
-            f"JSON schema:\n{json.dumps(schema, ensure_ascii=False)}\n\n"
-            f"Payload:\n{json.dumps(payload, ensure_ascii=False)}"
+            "Если в контексте есть база знаний, используй ТОЛЬКО фрагменты, которые прямо относятся к теме запроса.\n"
+            "Не переноси термины/факты из базы знаний, если их связь с темой неочевидна.\n"
+            "Если релевантных фрагментов нет, игнорируй базу знаний и пиши только по запросу пользователя.\n"
+            "Используй 2-4 коротких абзаца, без хештегов, без эмодзи, без ссылок.\n"
+            f"Язык ответа: {language}.\n\n"
+            f"JSON-схема:\n{json.dumps(schema, ensure_ascii=False)}\n\n"
+            f"Входные данные:\n{json.dumps(payload, ensure_ascii=False)}"
         )
         content = self._chat(full_prompt)
-        json_text = self._extract_json(content)
+        result: VKGeneratedContent | None = None
         try:
-            result = VKGeneratedContent.model_validate_json(json_text)
+            json_text = self._extract_json(content)
         except Exception:
-            fallback = VKPostIdea.model_validate_json(json_text)
-            result = VKGeneratedContent(content_type=requested_type, text=fallback.text)
+            json_text = ""
+        if json_text:
+            result = self._parse_generated_content(json_text, requested_type)
+        if result is None:
+            repair_prompt = (
+                "Исправь предыдущий ответ.\n"
+                "Ты вернул JSON не в нужном формате.\n"
+                "Верни ТОЛЬКО JSON-объект-экземпляр (не JSON-schema) со строгими ключами:\n"
+                "content_type, text, story_frames, image_prompt, video_script.\n"
+                f"content_type должен быть: {requested_type}.\n"
+                "Поле text обязательно и должно быть непустой строкой.\n"
+                f"Язык: {language}.\n"
+                f"Повторно входные данные:\n{json.dumps(payload, ensure_ascii=False)}"
+            )
+            repaired_content = self._chat(repair_prompt)
+            try:
+                repaired_json = self._extract_json(repaired_content)
+            except Exception:
+                repaired_json = ""
+            if repaired_json:
+                result = self._parse_generated_content(repaired_json, requested_type)
+            if result is None:
+                fallback_text = _normalize_text_for_response(
+                    _strip_emojis(repaired_content or content or ""),
+                    single_line=True,
+                )
+                if fallback_text and not fallback_text.startswith("{"):
+                    result = VKGeneratedContent(content_type=requested_type, text=fallback_text)
+        if result is None:
+            raise ValueError("GigaChat returned JSON without required 'text' field")
         result.content_type = requested_type
-        result.text = _strip_emojis(result.text or "")
+        result.text = _normalize_text_for_response(_strip_emojis(result.text or ""), single_line=True)
         result.story_frames = [
-            _strip_emojis(frame) for frame in (result.story_frames or []) if str(frame or "").strip()
+            _normalize_text_for_response(_strip_emojis(frame), single_line=True)
+            for frame in (result.story_frames or [])
+            if str(frame or "").strip()
         ][:6]
         if result.image_prompt:
-            result.image_prompt = result.image_prompt.strip()
+            result.image_prompt = _normalize_text_for_response(result.image_prompt, single_line=True)
         if result.video_script:
-            result.video_script = result.video_script.strip()
+            result.video_script = _normalize_text_for_response(result.video_script, single_line=False)
         return result
 
     def generate_image(
@@ -150,24 +190,28 @@ class GigaChatVKClient:
         schema = VKGroupInsights.model_json_schema()
         compact_payload = self._compact_group_payload(payload)
         full_prompt = (
-            "You are a VK community analyst.\n"
-            "Use ONLY the supplied data.\n"
-            "Return ONLY one JSON object, no markdown, no comments.\n"
-            "Do NOT echo the input. Do NOT wrap the response in VKGroupInsights or any other outer key.\n"
-            "The top-level JSON object must contain exactly these keys:\n"
-            "audience_interests, audience_age, audience_activity, potential_competitors, summary, limitations.\n"
-            "Each list item must be a short natural-language bullet, not raw tokens.\n"
-            "If some data is missing, mention that in limitations.\n"
-            f"Write in language: {language}.\n\n"
-            f"JSON schema:\n{json.dumps(schema, ensure_ascii=False)}\n\n"
-            "Example response:\n"
-            "{\"audience_interests\":[\"Интерес к игровым обновлениям и патчам\"],"
-            "\"audience_age\":[\"18-24 - вероятное ядро\"],"
-            "\"audience_activity\":[\"Средняя активность\"],"
-            "\"potential_competitors\":[\"Паблики про Counter-Strike и киберспорт\"],"
-            "\"summary\":\"Короткий вывод.\","
-            "\"limitations\":[\"Часть выводов эвристические.\"]}\n\n"
-            f"Payload:\n{json.dumps(compact_payload, ensure_ascii=False)}"
+            "Ты аналитик сообществ ВКонтакте.\n"
+            "Используй ТОЛЬКО переданные данные.\n"
+            "Верни ТОЛЬКО один JSON-объект, без markdown и комментариев.\n"
+            "Не дублируй входные данные. Не оборачивай ответ в VKGroupInsights или другой внешний ключ.\n"
+            "Верхний уровень JSON должен содержать ровно эти ключи:\n"
+            "audience_interests, audience_age, audience_activity, potential_competitors, search_tags, summary, limitations, recommendations.\n"
+            "Каждый элемент списка должен быть коротким тезисом на естественном языке, а не сырыми токенами.\n"
+            "search_tags: 6-12 коротких тематических тегов/фраз для поиска конкурентов.\n"
+            "recommendations: 2-4 объекта с полями title, action, rationale.\n"
+            "Если данных недостаточно, явно укажи это в limitations.\n"
+            f"Язык ответа: {language}.\n\n"
+            f"JSON-схема:\n{json.dumps(schema, ensure_ascii=False)}\n\n"
+            "Пример ответа:\n"
+            "{\"audience_interests\":[\"Советы по обслуживанию авто и дорожные ситуации\"],"
+            "\"audience_age\":[\"25-44 — вероятное ядро аудитории\"],"
+            "\"audience_activity\":[\"Стабильные комментарии под практичными постами\"],"
+            "\"potential_competitors\":[\"Локальные авто-сообщества с ежедневными новостями\"],"
+            "\"search_tags\":[\"авто новости\",\"дорожные ситуации\",\"ремонт авто\",\"сообщество водителей\"],"
+            "\"summary\":\"Ядро интересов — практический авто-контент с регулярным обсуждением.\","
+            "\"limitations\":[\"Публичные данные VK могут не содержать полные метрики вовлеченности.\"],"
+            "\"recommendations\":[{\"title\":\"Серия практичных постов\",\"action\":\"Запустить рубрику по обслуживанию авто\",\"rationale\":\"Тема дает стабильные обсуждения\"}]}\n\n"
+            f"Входные данные:\n{json.dumps(compact_payload, ensure_ascii=False)}"
         )
         content = self._chat(full_prompt)
         json_text = self._extract_json(content)
@@ -180,7 +224,22 @@ class GigaChatVKClient:
             "temperature": 0.2,
         }
         data = self._chat_raw(payload)
-        return str(data["choices"][0]["message"]["content"])
+        message = data.get("choices", [{}])[0].get("message", {})
+        content = message.get("content")
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts: list[str] = []
+            for item in content:
+                if isinstance(item, str):
+                    parts.append(item)
+                    continue
+                if isinstance(item, dict):
+                    text = item.get("text") or item.get("content")
+                    if isinstance(text, str):
+                        parts.append(text)
+            return "\n".join(part for part in parts if part).strip()
+        return str(content or "")
 
     def _chat_raw(self, payload: dict[str, Any]) -> dict[str, Any]:
         token = self._get_access_token()
@@ -260,14 +319,108 @@ class GigaChatVKClient:
         return cleaned
 
     @staticmethod
+    def _parse_generated_content(json_text: str, requested_type: str) -> VKGeneratedContent | None:
+        try:
+            return VKGeneratedContent.model_validate_json(json_text)
+        except Exception:
+            pass
+
+        data = GigaChatVKClient._safe_load_json_like(json_text)
+        if not isinstance(data, dict):
+            return None
+
+        payload = GigaChatVKClient._unwrap_generated_payload(data)
+        if not isinstance(payload, dict):
+            return None
+        if GigaChatVKClient._looks_like_json_schema(payload):
+            return None
+
+        text_value = GigaChatVKClient._pick_text_value(payload)
+        if not text_value:
+            return None
+
+        story_frames_raw = payload.get("story_frames")
+        story_frames: list[str] = []
+        if isinstance(story_frames_raw, list):
+            story_frames = [str(item) for item in story_frames_raw if str(item or "").strip()]
+
+        image_prompt = payload.get("image_prompt")
+        if image_prompt is not None:
+            image_prompt = str(image_prompt)
+
+        video_script = payload.get("video_script")
+        if video_script is not None:
+            video_script = str(video_script)
+
+        return VKGeneratedContent(
+            content_type=requested_type,
+            text=text_value,
+            story_frames=story_frames,
+            image_prompt=image_prompt,
+            video_script=video_script,
+        )
+
+    @staticmethod
+    def _safe_load_json_like(text: str) -> Any:
+        for candidate in (text, GigaChatVKClient._repair_json_like_text(text)):
+            try:
+                return json.loads(candidate)
+            except Exception:
+                continue
+        try:
+            return ast.literal_eval(GigaChatVKClient._repair_json_like_text(text))
+        except Exception:
+            return None
+
+    @staticmethod
+    def _unwrap_generated_payload(data: dict[str, Any]) -> dict[str, Any]:
+        current: Any = data
+        wrappers = ("VKGeneratedContent", "generated_content", "response", "result", "data", "output")
+        for _ in range(3):
+            if not isinstance(current, dict):
+                break
+
+            unwrapped = False
+            for key in wrappers:
+                value = current.get(key)
+                if isinstance(value, dict):
+                    current = value
+                    unwrapped = True
+                    break
+            if unwrapped:
+                continue
+
+            if len(current) == 1:
+                only_value = next(iter(current.values()))
+                if isinstance(only_value, dict):
+                    current = only_value
+                    continue
+            break
+        return current if isinstance(current, dict) else data
+
+    @staticmethod
+    def _looks_like_json_schema(data: dict[str, Any]) -> bool:
+        return isinstance(data.get("properties"), dict) and "text" not in data
+
+    @staticmethod
+    def _pick_text_value(data: dict[str, Any]) -> str | None:
+        for key in ("text", "content", "message", "caption", "post_text", "post"):
+            value = data.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return None
+
+    @staticmethod
     def _validate_group_insights_json(json_text: str) -> VKGroupInsights:
         expected_keys = {
             "audience_interests",
             "audience_age",
             "audience_activity",
             "potential_competitors",
+            "search_tags",
             "summary",
             "limitations",
+            "recommendations",
         }
         try:
             return VKGroupInsights.model_validate_json(json_text)
@@ -344,6 +497,7 @@ class GigaChatVKClient:
                 "audience_age": local_clusters.get("audience_age", [])[:3],
                 "audience_activity": local_clusters.get("audience_activity", [])[:3],
                 "potential_competitors": local_clusters.get("potential_competitors", [])[:3],
+                "search_tags": local_clusters.get("search_tags", [])[:8],
                 "summary": local_clusters.get("summary", ""),
             },
             "posts": compact_posts,
@@ -409,7 +563,7 @@ class GigaChatVKClient:
         if media_type not in {"image", "video"}:
             raise ValueError("Unsupported media_type")
 
-        tone_hint = (tone or "").strip() or "neutral"
+        tone_hint = (tone or "").strip() or "нейтральный"
         media_word = "изображение" if media_type == "image" else "видео"
         system_instruction = (
             f"Ты создаешь {media_word} по запросу пользователя. "
@@ -473,3 +627,19 @@ def _strip_emojis(text: str) -> str:
         flags=re.UNICODE,
     )
     return emoji_pattern.sub("", text).strip()
+
+
+def _normalize_text_for_response(text: str, *, single_line: bool) -> str:
+    value = str(text or "")
+    value = re.sub(r"(?i)<br\s*/?>", "\n", value)
+    value = re.sub(r"(?i)</p\s*>", "\n", value)
+    value = re.sub(r"(?i)<p[^>]*>", "", value)
+    value = re.sub(r"<[^>]+>", " ", value)
+    value = value.replace("\\r\\n", "\n").replace("\\n", "\n")
+    value = value.replace("\r\n", "\n").replace("\r", "\n")
+    lines = [" ".join(line.split()) for line in value.split("\n") if line.strip()]
+    if not lines:
+        return ""
+    if single_line:
+        return " ".join(lines)
+    return "\n\n".join(lines)

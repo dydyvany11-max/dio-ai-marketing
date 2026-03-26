@@ -516,6 +516,30 @@ class VKKnowledgeBaseItemResponse(BaseModel):
 
     is_active: bool = Field(default=False, description="Is active knowledge base")
 
+    files: list["VKKnowledgeFileItemResponse"] = Field(
+        default_factory=list,
+        description="Uploaded files stored in this knowledge base",
+    )
+
+
+class VKKnowledgeFileItemResponse(BaseModel):
+
+    id: str = Field(description="Knowledge document id")
+
+    filename: str = Field(description="Uploaded filename")
+
+    title: str | None = Field(default=None, description="Document title")
+
+    source_type: str = Field(description="Document source type")
+
+    mime_type: str | None = Field(default=None, description="MIME type")
+
+    content_length: int = Field(description="Document content length")
+
+    created_at: str | None = Field(default=None, description="Created at (ISO)")
+
+    updated_at: str | None = Field(default=None, description="Updated at (ISO)")
+
 
 class VKKnowledgeBaseUploadResponse(BaseModel):
 
@@ -525,6 +549,17 @@ class VKKnowledgeBaseUploadResponse(BaseModel):
 class VKKnowledgeBaseListResponse(BaseModel):
 
     items: list[VKKnowledgeBaseItemResponse]
+
+
+class VKKnowledgeDeleteFileResponse(BaseModel):
+
+    deleted: bool = Field(default=True, description="Was file deleted")
+
+    document_id: str = Field(description="Deleted document id")
+
+    knowledge_base_id: str = Field(description="Knowledge base id where file was deleted")
+
+    remaining_documents: int = Field(description="How many documents left in the KB")
 
 
 class VKAIPostRequest(BaseModel):
@@ -584,6 +619,26 @@ class VKAIPostResponse(BaseModel):
 
     knowledge_base_name: str | None = Field(default=None, description="Used knowledge base title")
 
+    knowledge_chunks_used: int | None = Field(
+        default=None,
+        description="How many KB chunks were retrieved by RAG",
+    )
+
+    knowledge_chunks: list["VKRAGChunkUsedResponse"] = Field(
+        default_factory=list,
+        description="Which KB chunks were used for generation and why",
+    )
+
+
+class VKRAGChunkUsedResponse(BaseModel):
+    title: str | None = Field(default=None, description="Document/chunk title")
+    filename: str | None = Field(default=None, description="Source filename if available")
+    source_type: str | None = Field(default=None, description="Source type: text/file")
+    score: float = Field(description="Final retrieval relevance score")
+    reason: str | None = Field(default=None, description="Short explanation why this chunk was selected")
+    matched_terms: list[str] = Field(default_factory=list, description="Query terms matched in this chunk")
+    snippet_preview: str | None = Field(default=None, description="Short chunk preview")
+
 
 class VKGroupAnalyzeRequest(BaseModel):
 
@@ -604,22 +659,11 @@ class VKGroupAIInsights(BaseModel):
 
     potential_competitors: list[str] = Field(description="Likely competitors")
 
+    search_tags: list[str] = Field(default_factory=list, description="AI-generated tags for competitor search")
+
     summary: str = Field(description="Short summary")
 
     limitations: list[str] = Field(description="Limitations and assumptions")
-
-
-class VKTopicClusterResponse(BaseModel):
-
-    label: str = Field(description="Human-readable cluster label")
-
-    size: int = Field(description="How many posts belong to the cluster")
-
-    terms: list[str] = Field(description="Top cluster terms")
-
-    sample_titles: list[str] = Field(description="Example post titles")
-
-    sample_urls: list[str] = Field(description="Example source URLs")
 
 
 class VKCompetitorFoundResponse(BaseModel):
@@ -718,8 +762,6 @@ class VKGroupAnalyzeResponse(BaseModel):
     ai: VKGroupAIInsights
 
     audience_profile: VKAudienceProfileResponse
-
-    topic_clusters: list[VKTopicClusterResponse]
 
     competitors_found: list[VKCompetitorFoundResponse]
 
