@@ -23,6 +23,39 @@ _EXTRA_STOPWORDS = {
     "that",
     "with",
     "from",
+    "online",
+    "info",
+    "company",
+    "companies",
+    "official",
+    "partner",
+    "service",
+    "services",
+    "expert",
+    "experts",
+    "document",
+    "documents",
+    "version",
+    "versions",
+    "need",
+    "required",
+    "must",
+    "онлайн",
+    "инфо",
+    "компания",
+    "компании",
+    "официальный",
+    "партнер",
+    "услуга",
+    "услуги",
+    "эксперт",
+    "эксперты",
+    "документ",
+    "документы",
+    "версия",
+    "версии",
+    "пусть",
+    "необходимо",
     "для",
     "это",
     "также",
@@ -50,17 +83,43 @@ _EXTRA_STOPWORDS = {
 
 
 def build_local_vk_insights(group_name: str, screen_name: str, posts: list[dict], metrics: dict) -> tuple[dict, dict]:
+    return build_local_vk_insights_with_context(
+        group_name=group_name,
+        screen_name=screen_name,
+        posts=posts,
+        metrics=metrics,
+        group_description=None,
+        group_activity=None,
+    )
+
+
+def build_local_vk_insights_with_context(
+    group_name: str,
+    screen_name: str,
+    posts: list[dict],
+    metrics: dict,
+    group_description: str | None,
+    group_activity: str | None,
+) -> tuple[dict, dict]:
     cleaned_posts: list[dict] = []
     for post in posts:
         text = _normalize_text(str(post.get("text") or ""))
         if text:
             cleaned_posts.append({**post, "text": text})
 
-    tags = _extract_tags(
+    banned_terms = _brand_terms(group_name) | _brand_terms(screen_name)
+    post_tags = _extract_tags(
         cleaned_posts,
-        banned_terms=_brand_terms(group_name) | _brand_terms(screen_name),
+        banned_terms=banned_terms,
         limit=14,
     )
+    context_tags = _extract_context_tags(
+        description=group_description or "",
+        activity=group_activity or "",
+        banned_terms=banned_terms,
+        limit=10,
+    )
+    tags = _merge_tag_lists(context_tags, post_tags, limit=14)
 
     interests = _build_interest_bullets(tags)
     age = _build_age_bullets(tags, metrics)
@@ -108,11 +167,15 @@ def _normalize_text(text: str) -> str:
 
 
 def _tokenize(text: str) -> list[str]:
-    return [
-        token.lower()
-        for token in re.findall(r"[A-Za-zА-Яа-яЁё0-9]+", text or "")
-        if len(token) >= 3
-    ]
+    output: list[str] = []
+    for token in re.findall(r"[A-Za-z?-??-???0-9]+", text or ""):
+        value = token.lower()
+        if len(value) >= 3:
+            output.append(value)
+            continue
+        if len(value) >= 2 and any(ch.isdigit() for ch in value) and any(ch.isalpha() for ch in value):
+            output.append(value)
+    return output
 
 
 def _brand_terms(value: str) -> set[str]:
@@ -172,8 +235,49 @@ def _extract_tags(posts: list[dict], *, banned_terms: set[str], limit: int) -> l
     return tags
 
 
+def _extract_context_tags(description: str, activity: str, *, banned_terms: set[str], limit: int) -> list[str]:
+    text = " ".join(part for part in [description, activity] if part).strip()
+    if not text:
+        return []
+    tokens = [token for token in _tokenize(text) if _is_semantic_token(token, banned_terms)]
+    counter: Counter[str] = Counter(tokens)
+    for token in _tokenize(activity):
+        if _is_semantic_token(token, banned_terms):
+            counter[token] += 2
+    for idx in range(len(tokens) - 1):
+        phrase = f"{tokens[idx]} {tokens[idx + 1]}"
+        if _is_semantic_phrase(phrase):
+            counter[phrase] += 2
+    tags: list[str] = []
+    for term, _ in counter.most_common(limit * 3):
+        if term in tags:
+            continue
+        if any(term in existing or existing in term for existing in tags):
+            continue
+        tags.append(term)
+        if len(tags) >= limit:
+            break
+    return tags
+
+
+def _merge_tag_lists(primary: list[str], secondary: list[str], *, limit: int) -> list[str]:
+    merged: list[str] = []
+    for term in list(primary) + list(secondary):
+        if term in merged:
+            continue
+        if any(term in existing or existing in term for existing in merged):
+            continue
+        merged.append(term)
+        if len(merged) >= limit:
+            break
+    return merged
+
+
 def _is_semantic_token(token: str, banned_terms: set[str]) -> bool:
     if len(token) < 3:
+        if not (len(token) >= 2 and any(ch.isdigit() for ch in token) and any(ch.isalpha() for ch in token)):
+            return False
+    if len(token) < 2:
         return False
     if token in banned_terms:
         return False
@@ -181,7 +285,7 @@ def _is_semantic_token(token: str, banned_terms: set[str]) -> bool:
         return False
     if token.isdigit():
         return False
-    if any(ch.isdigit() for ch in token) and len(token) < 4:
+    if any(ch.isdigit() for ch in token) and len(token) < 4 and not any(ch.isalpha() for ch in token):
         return False
     if not any(ch.isalpha() for ch in token):
         return False

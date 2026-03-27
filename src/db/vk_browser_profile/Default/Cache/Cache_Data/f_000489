@@ -1,0 +1,6855 @@
+{
+  "FGC" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 819,
+    "y" : 780
+  },
+  "FGC-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 822,
+    "y" : 800
+  },
+  "FGC_L12" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 668,
+    "y" : 199
+  },
+  "FGC_L12-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 768,
+    "y" : 184
+  },
+  "FGC_L6" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 298,
+    "y" : 89
+  },
+  "FGC_L6-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 473,
+    "y" : 240
+  },
+  "FGC_L7" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 437,
+    "y" : 239
+  },
+  "FGC_L7-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 804,
+    "y" : 184
+  },
+  "FGC_L8" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 768,
+    "y" : 204
+  },
+  "FGC_L8-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 704,
+    "y" : 219
+  },
+  "FGC_R5R50" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 52,
+    "x" : 58,
+    "y" : 511
+  },
+  "FGC_R5R50-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 52,
+    "x" : 58,
+    "y" : 491
+  },
+  "FGC_R6R60" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 52,
+    "x" : 133,
+    "y" : 43
+  },
+  "FGC_R6R60-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 52,
+    "x" : 78,
+    "y" : 91
+  },
+  "FGC_S1" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 804,
+    "y" : 244
+  },
+  "FGC_S1-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 298,
+    "y" : 69
+  },
+  "FGC_S2" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 670,
+    "y" : 164
+  },
+  "FGC_S2-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 545,
+    "y" : 240
+  },
+  "FGC_S3" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 742,
+    "y" : 164
+  },
+  "FGC_S3-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 509,
+    "y" : 240
+  },
+  "FGC_S4" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 781,
+    "y" : 144
+  },
+  "FGC_S4-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 768,
+    "y" : 224
+  },
+  "FGC_S5" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 632,
+    "y" : 201
+  },
+  "FGC_S5-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 581,
+    "y" : 240
+  },
+  "FGC_S6" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 804,
+    "y" : 224
+  },
+  "FGC_S6-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 804,
+    "y" : 204
+  },
+  "FGC_S7" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 704,
+    "y" : 199
+  },
+  "FGC_S7-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 668,
+    "y" : 219
+  },
+  "FGC_S8" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 362,
+    "y" : 264
+  },
+  "FGC_S8-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 706,
+    "y" : 164
+  },
+  "FGC_S9" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 617,
+    "y" : 241
+  },
+  "FGC_S9-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 778,
+    "y" : 164
+  },
+  "Italia" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 355,
+    "y" : 717
+  },
+  "Italia-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 801,
+    "y" : 740
+  },
+  "RER" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 696,
+    "y" : 806
+  },
+  "RER-A" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 196,
+    "y" : 355
+  },
+  "RER-A-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 256,
+    "y" : 226
+  },
+  "RER-B" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 223,
+    "y" : 619
+  },
+  "RER-B-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 216,
+    "y" : 116
+  },
+  "RER-C" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 156,
+    "y" : 322
+  },
+  "RER-C-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 156,
+    "y" : 278
+  },
+  "RER-D" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 140,
+    "y" : 694
+  },
+  "RER-D-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 214,
+    "y" : 47
+  },
+  "RER-E" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 183,
+    "y" : 641
+  },
+  "RER-E-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 484,
+    "y" : 60
+  },
+  "RER-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 623,
+    "y" : 762
+  },
+  "adana" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 371,
+    "y" : 329
+  },
+  "adana-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 343,
+    "y" : 497
+  },
+  "aeroexpress" : {
+    "height" : 23,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 824,
+    "y" : 518
+  },
+  "aeroexpress-hover" : {
+    "height" : 23,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 824,
+    "y" : 289
+  },
+  "airport" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 645,
+    "y" : 762
+  },
+  "airport-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 613,
+    "y" : 665
+  },
+  "airport-m" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 302,
+    "y" : 621
+  },
+  "airport-m-hover" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 315,
+    "y" : 363
+  },
+  "alcohol" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 547,
+    "y" : 433
+  },
+  "alcohol-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 587,
+    "y" : 547
+  },
+  "almaty" : {
+    "height" : 27,
+    "pixelRatio" : 1,
+    "width" : 32,
+    "x" : 112,
+    "y" : 819
+  },
+  "almaty-hover" : {
+    "height" : 27,
+    "pixelRatio" : 1,
+    "width" : 32,
+    "x" : 80,
+    "y" : 819
+  },
+  "ankara_A" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 334,
+    "y" : 138
+  },
+  "ankara_A-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 296,
+    "y" : 821
+  },
+  "ankara_m" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 371,
+    "y" : 379
+  },
+  "ankara_m-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 343,
+    "y" : 447
+  },
+  "apartment" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 779,
+    "y" : 617
+  },
+  "apartment-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 539,
+    "y" : 572
+  },
+  "archery" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 539,
+    "y" : 620
+  },
+  "archery-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 473,
+    "y" : 741
+  },
+  "arrow" : {
+    "height" : 12,
+    "pixelRatio" : 1,
+    "width" : 17,
+    "x" : 394,
+    "y" : 765
+  },
+  "arrow-hover" : {
+    "height" : 12,
+    "pixelRatio" : 1,
+    "width" : 18,
+    "x" : 691,
+    "y" : 445
+  },
+  "athletics" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 731,
+    "y" : 626
+  },
+  "athletics-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 452,
+    "y" : 693
+  },
+  "atm" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 643,
+    "y" : 433
+  },
+  "atm-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 659,
+    "y" : 577
+  },
+  "baby_shop" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 459,
+    "y" : 789
+  },
+  "baby_shop-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 567,
+    "y" : 409
+  },
+  "bakery" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 766,
+    "y" : 353
+  },
+  "bakery-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 548,
+    "y" : 693
+  },
+  "baku" : {
+    "height" : 16,
+    "pixelRatio" : 1,
+    "width" : 33,
+    "x" : 396,
+    "y" : 402
+  },
+  "baku-1" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 49,
+    "x" : 57,
+    "y" : 553
+  },
+  "baku-1-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 49,
+    "x" : 57,
+    "y" : 531
+  },
+  "baku-2" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 50,
+    "x" : 0,
+    "y" : 773
+  },
+  "baku-2-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 50,
+    "x" : 0,
+    "y" : 797
+  },
+  "baku-3" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 50,
+    "x" : 78,
+    "y" : 67
+  },
+  "baku-3-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 50,
+    "x" : 0,
+    "y" : 749
+  },
+  "baku-hover" : {
+    "height" : 16,
+    "pixelRatio" : 1,
+    "width" : 33,
+    "x" : 395,
+    "y" : 438
+  },
+  "bank" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 589,
+    "y" : 457
+  },
+  "bank-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 771,
+    "y" : 569
+  },
+  "banknote" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 467,
+    "y" : 599
+  },
+  "banknote-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 419,
+    "y" : 599
+  },
+  "bar" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 733,
+    "y" : 473
+  },
+  "bar-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 718,
+    "y" : 349
+  },
+  "barcelona" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 703,
+    "y" : 329
+  },
+  "barcelona-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 343,
+    "y" : 522
+  },
+  "barcelona_L1" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 442,
+    "y" : 82
+  },
+  "barcelona_L1-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 688,
+    "y" : 62
+  },
+  "barcelona_L10" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 606,
+    "y" : 62
+  },
+  "barcelona_L10-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 360,
+    "y" : 82
+  },
+  "barcelona_L11" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 770,
+    "y" : 62
+  },
+  "barcelona_L11-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 647,
+    "y" : 62
+  },
+  "barcelona_L2" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 524,
+    "y" : 82
+  },
+  "barcelona_L2-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 483,
+    "y" : 82
+  },
+  "barcelona_L3" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 647,
+    "y" : 82
+  },
+  "barcelona_L3-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 729,
+    "y" : 62
+  },
+  "barcelona_L4" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 606,
+    "y" : 82
+  },
+  "barcelona_L4-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 565,
+    "y" : 82
+  },
+  "barcelona_L5" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 103,
+    "y" : 657
+  },
+  "barcelona_L5-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 565,
+    "y" : 62
+  },
+  "barcelona_L9" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 524,
+    "y" : 62
+  },
+  "barcelona_L9-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 401,
+    "y" : 82
+  },
+  "baseball" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 416,
+    "y" : 524
+  },
+  "baseball-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 425,
+    "y" : 717
+  },
+  "basketball" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 555,
+    "y" : 789
+  },
+  "basketball-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 497,
+    "y" : 741
+  },
+  "bbq" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 779,
+    "y" : 713
+  },
+  "bbq-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 728,
+    "y" : 521
+  },
+  "beach" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 16,
+    "x" : 803,
+    "y" : 628
+  },
+  "beach-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 16,
+    "x" : 678,
+    "y" : 828
+  },
+  "beauty" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 759,
+    "y" : 425
+  },
+  "beauty-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 333,
+    "y" : 781
+  },
+  "beer" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 539,
+    "y" : 596
+  },
+  "beer-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 491,
+    "y" : 596
+  },
+  "bench" : {
+    "height" : 11,
+    "pixelRatio" : 1,
+    "width" : 21,
+    "x" : 723,
+    "y" : 615
+  },
+  "bench-hover" : {
+    "height" : 11,
+    "pixelRatio" : 1,
+    "width" : 21,
+    "x" : 142,
+    "y" : 760
+  },
+  "berlin-u1" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 27,
+    "x" : 568,
+    "y" : 320
+  },
+  "berlin-u1-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 27,
+    "x" : 506,
+    "y" : 365
+  },
+  "berlin-u2" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 315,
+    "y" : 531
+  },
+  "berlin-u2-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 740,
+    "y" : 264
+  },
+  "berlin-u3" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 516,
+    "y" : 300
+  },
+  "berlin-u3-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 740,
+    "y" : 212
+  },
+  "berlin-u4" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 740,
+    "y" : 309
+  },
+  "berlin-u4-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 520,
+    "y" : 260
+  },
+  "berlin-u5" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 629,
+    "y" : 285
+  },
+  "berlin-u5-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 817,
+    "y" : 144
+  },
+  "berlin-u6" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 488,
+    "y" : 300
+  },
+  "berlin-u6-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 601,
+    "y" : 281
+  },
+  "berlin-u7" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 656,
+    "y" : 309
+  },
+  "berlin-u7-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 796,
+    "y" : 284
+  },
+  "berlin-u8" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 576,
+    "y" : 260
+  },
+  "berlin-u8-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 712,
+    "y" : 309
+  },
+  "berlin-u9" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 600,
+    "y" : 301
+  },
+  "berlin-u9-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 432,
+    "y" : 297
+  },
+  "beverages" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 687,
+    "y" : 397
+  },
+  "beverages-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 459,
+    "y" : 765
+  },
+  "bicycle" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 449,
+    "y" : 741
+  },
+  "bicycle-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 531,
+    "y" : 765
+  },
+  "bike-parking" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 343,
+    "y" : 363
+  },
+  "bike-parking-hover" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 315,
+    "y" : 391
+  },
+  "bollard" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 10,
+    "x" : 320,
+    "y" : 284
+  },
+  "bollard-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 10,
+    "x" : 320,
+    "y" : 266
+  },
+  "book-shop" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 515,
+    "y" : 548
+  },
+  "book-shop-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 766,
+    "y" : 377
+  },
+  "border_control" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 14,
+    "x" : 163,
+    "y" : 173
+  },
+  "border_control-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 14,
+    "x" : 202,
+    "y" : 209
+  },
+  "bowls" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 651,
+    "y" : 553
+  },
+  "bowls-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 475,
+    "y" : 434
+  },
+  "brescia" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 340,
+    "y" : 22
+  },
+  "brescia-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 715,
+    "y" : 421
+  },
+  "buddhist" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 755,
+    "y" : 713
+  },
+  "buddhist-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 368,
+    "y" : 503
+  },
+  "bursaray" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 799,
+    "y" : 780
+  },
+  "bursaray-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 823,
+    "y" : 740
+  },
+  "bus" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 579,
+    "y" : 762
+  },
+  "bus-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 679,
+    "y" : 740
+  },
+  "bus-m" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 740,
+    "y" : 184
+  },
+  "bus-m-hover" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 315,
+    "y" : 447
+  },
+  "business" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 445,
+    "y" : 387
+  },
+  "business-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 416,
+    "y" : 499
+  },
+  "butcher" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 637,
+    "y" : 457
+  },
+  "butcher-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 735,
+    "y" : 401
+  },
+  "cable-car-m" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 343,
+    "y" : 391
+  },
+  "cable-car-m-hover" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 315,
+    "y" : 503
+  },
+  "cablecar" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 21,
+    "x" : 825,
+    "y" : 312
+  },
+  "cablecar-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 21,
+    "x" : 347,
+    "y" : 542
+  },
+  "cablecar-m" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 221,
+    "y" : 793
+  },
+  "cablecar-m-hover" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 334,
+    "y" : 219
+  },
+  "cafe" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 783,
+    "y" : 425
+  },
+  "cafe-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 589,
+    "y" : 385
+  },
+  "campsite" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 632,
+    "y" : 481
+  },
+  "campsite-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 523,
+    "y" : 433
+  },
+  "capital_l" : {
+    "height" : 15,
+    "pixelRatio" : 1,
+    "width" : 14,
+    "x" : 726,
+    "y" : 257
+  },
+  "capital_l-hover" : {
+    "height" : 14,
+    "pixelRatio" : 1,
+    "width" : 14,
+    "x" : 202,
+    "y" : 231
+  },
+  "capital_s" : {
+    "height" : 13,
+    "pixelRatio" : 1,
+    "width" : 12,
+    "x" : 831,
+    "y" : 452
+  },
+  "capital_s-hover" : {
+    "height" : 12,
+    "pixelRatio" : 1,
+    "width" : 12,
+    "x" : 726,
+    "y" : 272
+  },
+  "car-part" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 803,
+    "y" : 646
+  },
+  "car-part-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 683,
+    "y" : 621
+  },
+  "car-repair" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 779,
+    "y" : 641
+  },
+  "car-repair-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 595,
+    "y" : 433
+  },
+  "car-shop" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 495,
+    "y" : 410
+  },
+  "car-shop-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 807,
+    "y" : 442
+  },
+  "car-wash" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 733,
+    "y" : 449
+  },
+  "car-wash-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 541,
+    "y" : 457
+  },
+  "caravan_site" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 536,
+    "y" : 506
+  },
+  "caravan_site-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 637,
+    "y" : 385
+  },
+  "casino" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 465,
+    "y" : 813
+  },
+  "casino-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 393,
+    "y" : 821
+  },
+  "catania" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 584,
+    "y" : 827
+  },
+  "catania-hover" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 427,
+    "y" : 419
+  },
+  "cave_entrance" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 819,
+    "y" : 760
+  },
+  "cave_entrance-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 331,
+    "y" : 737
+  },
+  "cemetery" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 16,
+    "x" : 653,
+    "y" : 241
+  },
+  "cemetery-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 16,
+    "x" : 683,
+    "y" : 577
+  },
+  "chair-lift" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 282,
+    "y" : 248
+  },
+  "chair-lift-hover" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 315,
+    "y" : 307
+  },
+  "charging-station" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 755,
+    "y" : 689
+  },
+  "charging-station-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 596,
+    "y" : 339
+  },
+  "chemist" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 635,
+    "y" : 663
+  },
+  "chemist-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 755,
+    "y" : 617
+  },
+  "childcare" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 395,
+    "y" : 599
+  },
+  "childcare-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 443,
+    "y" : 574
+  },
+  "christian" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 449,
+    "y" : 717
+  },
+  "christian-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 611,
+    "y" : 641
+  },
+  "cinema" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 819,
+    "y" : 563
+  },
+  "cinema-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 723,
+    "y" : 591
+  },
+  "city" : {
+    "height" : 12,
+    "pixelRatio" : 1,
+    "width" : 11,
+    "x" : 814,
+    "y" : 353
+  },
+  "city-hover" : {
+    "height" : 12,
+    "pixelRatio" : 1,
+    "width" : 11,
+    "x" : 814,
+    "y" : 315
+  },
+  "climbing" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 555,
+    "y" : 765
+  },
+  "climbing-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 489,
+    "y" : 813
+  },
+  "clinic" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 507,
+    "y" : 765
+  },
+  "clinic-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 353,
+    "y" : 737
+  },
+  "clothes" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 377,
+    "y" : 717
+  },
+  "clothes-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 639,
+    "y" : 409
+  },
+  "college" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 683,
+    "y" : 597
+  },
+  "college-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 680,
+    "y" : 505
+  },
+  "computer" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 541,
+    "y" : 385
+  },
+  "computer-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 757,
+    "y" : 473
+  },
+  "convenience" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 417,
+    "y" : 813
+  },
+  "convenience-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 819,
+    "y" : 587
+  },
+  "copyshop" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 747,
+    "y" : 545
+  },
+  "copyshop-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 611,
+    "y" : 593
+  },
+  "cosmetics" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 611,
+    "y" : 617
+  },
+  "cosmetics-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 356,
+    "y" : 693
+  },
+  "courthouse" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 377,
+    "y" : 741
+  },
+  "courthouse-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 513,
+    "y" : 813
+  },
+  "cricket" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 814,
+    "y" : 394
+  },
+  "cricket-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 800,
+    "y" : 514
+  },
+  "cross" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 16,
+    "x" : 635,
+    "y" : 569
+  },
+  "cross-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 16,
+    "x" : 611,
+    "y" : 547
+  },
+  "curling" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 371,
+    "y" : 429
+  },
+  "curling-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 723,
+    "y" : 567
+  },
+  "d1-1" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 477,
+    "y" : 122
+  },
+  "d1-10" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 399,
+    "y" : 121
+  },
+  "d1-2" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 399,
+    "y" : 102
+  },
+  "d1-3" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 360,
+    "y" : 121
+  },
+  "d1-4" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 554,
+    "y" : 201
+  },
+  "d1-5" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 177,
+    "y" : 168
+  },
+  "d1-6" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 437,
+    "y" : 220
+  },
+  "d1-7" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 592,
+    "y" : 162
+  },
+  "d1-8" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 514,
+    "y" : 142
+  },
+  "d1-9" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 515,
+    "y" : 201
+  },
+  "d2-1" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 553,
+    "y" : 142
+  },
+  "d2-10" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 216,
+    "y" : 226
+  },
+  "d2-2" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 593,
+    "y" : 201
+  },
+  "d2-3" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 631,
+    "y" : 162
+  },
+  "d2-4" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 360,
+    "y" : 102
+  },
+  "d2-5" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 437,
+    "y" : 201
+  },
+  "d2-6" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 476,
+    "y" : 201
+  },
+  "d2-7" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 276,
+    "y" : 516
+  },
+  "d2-8" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 438,
+    "y" : 122
+  },
+  "d2-9" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 230,
+    "y" : 578
+  },
+  "default-10" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 66,
+    "x" : 360,
+    "y" : 20
+  },
+  "default-2" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 560,
+    "y" : 529
+  },
+  "default-3" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 26,
+    "x" : 820,
+    "y" : 104
+  },
+  "default-4" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 30,
+    "x" : 434,
+    "y" : 259
+  },
+  "default-5" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 768,
+    "y" : 244
+  },
+  "default-6" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 44,
+    "x" : 104,
+    "y" : 589
+  },
+  "default-7" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 50,
+    "x" : 50,
+    "y" : 753
+  },
+  "default-8" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 56,
+    "x" : 488,
+    "y" : 20
+  },
+  "default-9" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 62,
+    "x" : 426,
+    "y" : 20
+  },
+  "defibrillator" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 797,
+    "y" : 760
+  },
+  "defibrillator-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 768,
+    "y" : 309
+  },
+  "dentist" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 659,
+    "y" : 601
+  },
+  "dentist-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 491,
+    "y" : 548
+  },
+  "department_store" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 777,
+    "y" : 329
+  },
+  "department_store-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 488,
+    "y" : 506
+  },
+  "diving" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 632,
+    "y" : 505
+  },
+  "diving-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 735,
+    "y" : 425
+  },
+  "dnepr" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 488,
+    "y" : 530
+  },
+  "dnepr-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 536,
+    "y" : 530
+  },
+  "dog_park" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 493,
+    "y" : 385
+  },
+  "dog_park-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 416,
+    "y" : 474
+  },
+  "doityourself" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 246,
+    "y" : 821
+  },
+  "doityourself-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 371,
+    "y" : 354
+  },
+  "dot_blue" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 443,
+    "y" : 549
+  },
+  "dot_blue-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 500,
+    "y" : 340
+  },
+  "dot_emerald" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 395,
+    "y" : 574
+  },
+  "dot_emerald-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 524,
+    "y" : 340
+  },
+  "dot_gray" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 305,
+    "y" : 757
+  },
+  "dot_gray-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 790,
+    "y" : 304
+  },
+  "dot_green" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 419,
+    "y" : 549
+  },
+  "dot_green-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 419,
+    "y" : 574
+  },
+  "dot_grey" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 392,
+    "y" : 524
+  },
+  "dot_grey-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 428,
+    "y" : 337
+  },
+  "dot_l" : {
+    "height" : 10,
+    "pixelRatio" : 1,
+    "width" : 9,
+    "x" : 121,
+    "y" : 111
+  },
+  "dot_l-hover" : {
+    "height" : 10,
+    "pixelRatio" : 1,
+    "width" : 9,
+    "x" : 167,
+    "y" : 129
+  },
+  "dot_lilac" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 347,
+    "y" : 564
+  },
+  "dot_lilac-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 753,
+    "y" : 284
+  },
+  "dot_orange" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 680,
+    "y" : 259
+  },
+  "dot_orange-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 321,
+    "y" : 821
+  },
+  "dot_pink" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 464,
+    "y" : 474
+  },
+  "dot_pink-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 440,
+    "y" : 474
+  },
+  "dot_red" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 428,
+    "y" : 362
+  },
+  "dot_red-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 443,
+    "y" : 599
+  },
+  "dot_s" : {
+    "height" : 9,
+    "pixelRatio" : 1,
+    "width" : 8,
+    "x" : 297,
+    "y" : 757
+  },
+  "dot_s-hover" : {
+    "height" : 8,
+    "pixelRatio" : 1,
+    "width" : 8,
+    "x" : 699,
+    "y" : 589
+  },
+  "dot_transport" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 467,
+    "y" : 574
+  },
+  "dot_transport-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 310,
+    "y" : 241
+  },
+  "dot_turquoise" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 681,
+    "y" : 284
+  },
+  "dot_turquoise-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 158,
+    "y" : 794
+  },
+  "dot_violet" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 440,
+    "y" : 499
+  },
+  "dot_violet-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 371,
+    "y" : 551
+  },
+  "drag-lift" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 334,
+    "y" : 163
+  },
+  "drag-lift-hover" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 50,
+    "y" : 793
+  },
+  "ekb" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 19,
+    "x" : 827,
+    "y" : 635
+  },
+  "ekb-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 19,
+    "x" : 827,
+    "y" : 653
+  },
+  "embassy" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 515,
+    "y" : 572
+  },
+  "embassy-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 819,
+    "y" : 611
+  },
+  "entrance" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 19,
+    "x" : 827,
+    "y" : 40
+  },
+  "entrance-hover" : {
+    "height" : 19,
+    "pixelRatio" : 1,
+    "width" : 19,
+    "x" : 777,
+    "y" : 282
+  },
+  "equestrian" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 587,
+    "y" : 619
+  },
+  "equestrian-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 801,
+    "y" : 329
+  },
+  "equestrian2" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 221,
+    "y" : 821
+  },
+  "equestrian2-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 343,
+    "y" : 472
+  },
+  "erotic_shop" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 539,
+    "y" : 548
+  },
+  "erotic_shop-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 565,
+    "y" : 385
+  },
+  "fastfood" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 512,
+    "y" : 482
+  },
+  "fastfood-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 521,
+    "y" : 741
+  },
+  "ferry" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 608,
+    "y" : 806
+  },
+  "ferry-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 591,
+    "y" : 740
+  },
+  "ferry-m" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 277,
+    "y" : 771
+  },
+  "ferry-m-hover" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 315,
+    "y" : 475
+  },
+  "fire_station" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 795,
+    "y" : 562
+  },
+  "fire_station-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 488,
+    "y" : 482
+  },
+  "firehydrant" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 16,
+    "x" : 707,
+    "y" : 609
+  },
+  "firehydrant-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 16,
+    "x" : 707,
+    "y" : 589
+  },
+  "flag-finish" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 572,
+    "y" : 340
+  },
+  "flag-finish-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 467,
+    "y" : 549
+  },
+  "florist" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 515,
+    "y" : 596
+  },
+  "florist-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 659,
+    "y" : 645
+  },
+  "fountan" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 16,
+    "x" : 803,
+    "y" : 610
+  },
+  "fountan-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 16,
+    "x" : 649,
+    "y" : 722
+  },
+  "fuel" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 781,
+    "y" : 449
+  },
+  "fuel-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 380,
+    "y" : 693
+  },
+  "funicular" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 601,
+    "y" : 762
+  },
+  "funicular-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 674,
+    "y" : 806
+  },
+  "funicular-m" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 315,
+    "y" : 419
+  },
+  "funicular-m-hover" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 343,
+    "y" : 335
+  },
+  "furniture" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 512,
+    "y" : 506
+  },
+  "furniture-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 704,
+    "y" : 493
+  },
+  "gallery" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 517,
+    "y" : 385
+  },
+  "gallery-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 371,
+    "y" : 576
+  },
+  "gallery_shop" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 428,
+    "y" : 693
+  },
+  "gallery_shop-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 608,
+    "y" : 505
+  },
+  "garden_center" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 615,
+    "y" : 409
+  },
+  "garden_center-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 563,
+    "y" : 595
+  },
+  "gift" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 752,
+    "y" : 497
+  },
+  "gift-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 680,
+    "y" : 481
+  },
+  "golf" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 805,
+    "y" : 466
+  },
+  "golf-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 790,
+    "y" : 377
+  },
+  "greengrocer" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 742,
+    "y" : 377
+  },
+  "greengrocer-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 471,
+    "y" : 410
+  },
+  "grocery" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 757,
+    "y" : 449
+  },
+  "grocery-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 441,
+    "y" : 813
+  },
+  "gymnastics" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 694,
+    "y" : 349
+  },
+  "gymnastics-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 675,
+    "y" : 529
+  },
+  "hairdresser" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 587,
+    "y" : 595
+  },
+  "hairdresser-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 545,
+    "y" : 717
+  },
+  "hamburger-u1" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 27,
+    "x" : 533,
+    "y" : 365
+  },
+  "hamburger-u1-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 27,
+    "x" : 541,
+    "y" : 320
+  },
+  "hamburger-u2" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 460,
+    "y" : 300
+  },
+  "hamburger-u2-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 486,
+    "y" : 320
+  },
+  "hamburger-u3" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 573,
+    "y" : 280
+  },
+  "hamburger-u3-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 548,
+    "y" : 260
+  },
+  "hamburger-u4" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 768,
+    "y" : 262
+  },
+  "hamburger-u4-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 461,
+    "y" : 280
+  },
+  "helicopter" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 707,
+    "y" : 653
+  },
+  "helicopter-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 531,
+    "y" : 789
+  },
+  "hindu" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 491,
+    "y" : 572
+  },
+  "hindu-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 656,
+    "y" : 505
+  },
+  "hospital" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 731,
+    "y" : 674
+  },
+  "hospital-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 781,
+    "y" : 473
+  },
+  "hotel" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 500,
+    "y" : 693
+  },
+  "hotel-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 543,
+    "y" : 409
+  },
+  "ice-hockey" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 483,
+    "y" : 789
+  },
+  "ice-hockey-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 656,
+    "y" : 481
+  },
+  "ice_cream" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 507,
+    "y" : 789
+  },
+  "ice_cream-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 381,
+    "y" : 780
+  },
+  "info" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 635,
+    "y" : 740
+  },
+  "info-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 687,
+    "y" : 718
+  },
+  "istanbul" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 704,
+    "y" : 259
+  },
+  "istanbul-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 824,
+    "y" : 264
+  },
+  "istanbul_m1" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 118,
+    "y" : 794
+  },
+  "istanbul_m1-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 100,
+    "y" : 727
+  },
+  "istanbul_m1_m2" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 58,
+    "x" : 0,
+    "y" : 247
+  },
+  "istanbul_m1_m2-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 58,
+    "x" : 0,
+    "y" : 322
+  },
+  "istanbul_m2" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 78,
+    "y" : 794
+  },
+  "istanbul_m2-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 216,
+    "y" : 91
+  },
+  "istanbul_m2_m7" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 58,
+    "x" : 0,
+    "y" : 272
+  },
+  "istanbul_m2_m7-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 58,
+    "x" : 0,
+    "y" : 372
+  },
+  "istanbul_m3" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 40,
+    "y" : 821
+  },
+  "istanbul_m3-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 103,
+    "y" : 632
+  },
+  "istanbul_m3_m9" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 58,
+    "x" : 0,
+    "y" : 347
+  },
+  "istanbul_m3_m9-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 58,
+    "x" : 0,
+    "y" : 297
+  },
+  "istanbul_m4" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 254,
+    "y" : 44
+  },
+  "istanbul_m4-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 256,
+    "y" : 91
+  },
+  "istanbul_m5" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 103,
+    "y" : 607
+  },
+  "istanbul_m5-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 0,
+    "y" : 821
+  },
+  "istanbul_m6" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 214,
+    "y" : 22
+  },
+  "istanbul_m6-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 176,
+    "y" : 101
+  },
+  "istanbul_m7" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 100,
+    "y" : 702
+  },
+  "istanbul_m7-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 162,
+    "y" : 209
+  },
+  "istanbul_m9" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 100,
+    "y" : 677
+  },
+  "istanbul_m9-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 294,
+    "y" : 44
+  },
+  "izmir" : {
+    "height" : 26,
+    "pixelRatio" : 1,
+    "width" : 26,
+    "x" : 334,
+    "y" : 44
+  },
+  "izmir-hover" : {
+    "height" : 26,
+    "pixelRatio" : 1,
+    "width" : 26,
+    "x" : 334,
+    "y" : 91
+  },
+  "jewelry" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 771,
+    "y" : 545
+  },
+  "jewelry-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 497,
+    "y" : 717
+  },
+  "jewish" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 800,
+    "y" : 538
+  },
+  "jewish-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 663,
+    "y" : 409
+  },
+  "kazan" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 21,
+    "x" : 825,
+    "y" : 334
+  },
+  "kazan-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 21,
+    "x" : 592,
+    "y" : 722
+  },
+  "kharkiv" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 631,
+    "y" : 367
+  },
+  "kharkiv-1" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 402,
+    "y" : 60
+  },
+  "kharkiv-1-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 41,
+    "x" : 443,
+    "y" : 60
+  },
+  "kharkiv-2" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 42,
+    "x" : 743,
+    "y" : 40
+  },
+  "kharkiv-2-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 42,
+    "x" : 659,
+    "y" : 40
+  },
+  "kharkiv-3" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 42,
+    "x" : 100,
+    "y" : 752
+  },
+  "kharkiv-3-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 42,
+    "x" : 256,
+    "y" : 69
+  },
+  "kharkiv-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 512,
+    "y" : 530
+  },
+  "kiev" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 27,
+    "x" : 595,
+    "y" : 321
+  },
+  "kiev-1" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 117,
+    "y" : 217
+  },
+  "kiev-1-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 117,
+    "y" : 195
+  },
+  "kiev-2" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 111,
+    "y" : 437
+  },
+  "kiev-2-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 111,
+    "y" : 283
+  },
+  "kiev-3" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 111,
+    "y" : 327
+  },
+  "kiev-3-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 121,
+    "y" : 151
+  },
+  "kiev-4" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 111,
+    "y" : 349
+  },
+  "kiev-4-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 118,
+    "y" : 173
+  },
+  "kiev-5" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 111,
+    "y" : 415
+  },
+  "kiev-5-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 111,
+    "y" : 305
+  },
+  "kiev-6" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 111,
+    "y" : 481
+  },
+  "kiev-6-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 110,
+    "y" : 525
+  },
+  "kiev-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 27,
+    "x" : 649,
+    "y" : 329
+  },
+  "kindergarten" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 560,
+    "y" : 505
+  },
+  "kindergarten-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 545,
+    "y" : 741
+  },
+  "kiosk" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 635,
+    "y" : 615
+  },
+  "kiosk-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 591,
+    "y" : 409
+  },
+  "krivoy-rog" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 27,
+    "x" : 676,
+    "y" : 329
+  },
+  "krivoy-rog-1" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 110,
+    "y" : 503
+  },
+  "krivoy-rog-1-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 117,
+    "y" : 239
+  },
+  "krivoy-rog-2" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 111,
+    "y" : 393
+  },
+  "krivoy-rog-2-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 111,
+    "y" : 459
+  },
+  "krivoy-rog-3" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 111,
+    "y" : 261
+  },
+  "krivoy-rog-3-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 45,
+    "x" : 111,
+    "y" : 371
+  },
+  "krivoy-rog-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 27,
+    "x" : 622,
+    "y" : 325
+  },
+  "laundry" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 683,
+    "y" : 669
+  },
+  "laundry-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 548,
+    "y" : 340
+  },
+  "library" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 675,
+    "y" : 553
+  },
+  "library-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 670,
+    "y" : 347
+  },
+  "lift_gate" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 624,
+    "y" : 828
+  },
+  "lift_gate-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 604,
+    "y" : 828
+  },
+  "lighthouse" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 368,
+    "y" : 453
+  },
+  "lighthouse-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 371,
+    "y" : 404
+  },
+  "lille" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 689,
+    "y" : 784
+  },
+  "lille-1" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 190,
+    "y" : 575
+  },
+  "lille-1-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 183,
+    "y" : 619
+  },
+  "lille-2" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 196,
+    "y" : 487
+  },
+  "lille-2-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 216,
+    "y" : 204
+  },
+  "lille-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 630,
+    "y" : 806
+  },
+  "london" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 353,
+    "y" : 761
+  },
+  "london-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 607,
+    "y" : 365
+  },
+  "london_DLR" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 424,
+    "y" : 454
+  },
+  "london_DLR-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 723,
+    "y" : 742
+  },
+  "london_e" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 448,
+    "y" : 454
+  },
+  "london_e-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 659,
+    "y" : 625
+  },
+  "london_overground" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 627,
+    "y" : 549
+  },
+  "london_overground-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 627,
+    "y" : 529
+  },
+  "london_rail" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 144,
+    "y" : 819
+  },
+  "london_rail-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 808,
+    "y" : 82
+  },
+  "london_rail_e" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 58,
+    "x" : 0,
+    "y" : 441
+  },
+  "london_rail_e-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 58,
+    "x" : 0,
+    "y" : 507
+  },
+  "london_rail_o" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 58,
+    "x" : 0,
+    "y" : 419
+  },
+  "london_rail_o-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 58,
+    "x" : 0,
+    "y" : 485
+  },
+  "london_rail_u" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 58,
+    "x" : 0,
+    "y" : 463
+  },
+  "london_rail_u-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 58,
+    "x" : 0,
+    "y" : 397
+  },
+  "london_rail_u_dlr" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 78,
+    "x" : 204,
+    "y" : 0
+  },
+  "london_rail_u_dlr-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 78,
+    "x" : 0,
+    "y" : 89
+  },
+  "london_rail_u_o" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 78,
+    "x" : 0,
+    "y" : 67
+  },
+  "london_rail_u_o-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 78,
+    "x" : 282,
+    "y" : 0
+  },
+  "london_rail_u_o_DLR_e" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 118,
+    "x" : 0,
+    "y" : 0
+  },
+  "london_rail_u_o_DLR_e-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 118,
+    "x" : 0,
+    "y" : 22
+  },
+  "london_river" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 42,
+    "x" : 701,
+    "y" : 40
+  },
+  "london_river-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 42,
+    "x" : 785,
+    "y" : 40
+  },
+  "london_u" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 731,
+    "y" : 722
+  },
+  "london_u-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 331,
+    "y" : 717
+  },
+  "london_u_dlr" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 44,
+    "x" : 96,
+    "y" : 774
+  },
+  "london_u_dlr-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 44,
+    "x" : 106,
+    "y" : 569
+  },
+  "lyon" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 709,
+    "y" : 718
+  },
+  "lyon-A" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 230,
+    "y" : 597
+  },
+  "lyon-A-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 256,
+    "y" : 182
+  },
+  "lyon-B" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 216,
+    "y" : 182
+  },
+  "lyon-B-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 256,
+    "y" : 204
+  },
+  "lyon-C" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 202,
+    "y" : 267
+  },
+  "lyon-C-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 223,
+    "y" : 641
+  },
+  "lyon-D" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 256,
+    "y" : 160
+  },
+  "lyon-D-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 156,
+    "y" : 388
+  },
+  "lyon-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 665,
+    "y" : 718
+  },
+  "madrid" : {
+    "height" : 21,
+    "pixelRatio" : 1,
+    "width" : 26,
+    "x" : 334,
+    "y" : 117
+  },
+  "madrid-hover" : {
+    "height" : 21,
+    "pixelRatio" : 1,
+    "width" : 26,
+    "x" : 334,
+    "y" : 70
+  },
+  "madrid_1" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 144,
+    "y" : 674
+  },
+  "madrid_1-10" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 58,
+    "y" : 411
+  },
+  "madrid_1-10-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 58,
+    "y" : 291
+  },
+  "madrid_1-2-3" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 67,
+    "x" : 118,
+    "y" : 23
+  },
+  "madrid_1-2-3-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 67,
+    "x" : 360,
+    "y" : 0
+  },
+  "madrid_1-2-6" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 67,
+    "x" : 695,
+    "y" : 0
+  },
+  "madrid_1-2-6-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 67,
+    "x" : 628,
+    "y" : 0
+  },
+  "madrid_1-4" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 64,
+    "y" : 231
+  },
+  "madrid_1-4-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 58,
+    "y" : 271
+  },
+  "madrid_1-5" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 58,
+    "y" : 391
+  },
+  "madrid_1-5-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 58,
+    "y" : 311
+  },
+  "madrid_1-6" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 68,
+    "y" : 151
+  },
+  "madrid_1-6-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 703,
+    "y" : 20
+  },
+  "madrid_1-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 555,
+    "y" : 122
+  },
+  "madrid_10" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 516,
+    "y" : 122
+  },
+  "madrid_10-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 592,
+    "y" : 142
+  },
+  "madrid_11" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 476,
+    "y" : 161
+  },
+  "madrid_11-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 515,
+    "y" : 161
+  },
+  "madrid_12" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 555,
+    "y" : 102
+  },
+  "madrid_12-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 177,
+    "y" : 148
+  },
+  "madrid_2" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 633,
+    "y" : 102
+  },
+  "madrid_2-4" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 64,
+    "y" : 211
+  },
+  "madrid_2-4-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 58,
+    "y" : 351
+  },
+  "madrid_2-9" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 58,
+    "y" : 451
+  },
+  "madrid_2-9-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 58,
+    "y" : 251
+  },
+  "madrid_2-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 437,
+    "y" : 181
+  },
+  "madrid_3" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 477,
+    "y" : 102
+  },
+  "madrid_3-10" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 68,
+    "y" : 131
+  },
+  "madrid_3-10-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 650,
+    "y" : 20
+  },
+  "madrid_3-4-6" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 67,
+    "x" : 561,
+    "y" : 0
+  },
+  "madrid_3-4-6-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 67,
+    "x" : 427,
+    "y" : 0
+  },
+  "madrid_3-5" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 64,
+    "y" : 191
+  },
+  "madrid_3-5-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 58,
+    "y" : 371
+  },
+  "madrid_3-6" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 68,
+    "y" : 111
+  },
+  "madrid_3-6-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 597,
+    "y" : 20
+  },
+  "madrid_3-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 436,
+    "y" : 141
+  },
+  "madrid_4" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 180,
+    "y" : 751
+  },
+  "madrid_4-5-10" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 67,
+    "x" : 494,
+    "y" : 0
+  },
+  "madrid_4-5-10-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 67,
+    "x" : 762,
+    "y" : 0
+  },
+  "madrid_4-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 263,
+    "y" : 665
+  },
+  "madrid_5" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 437,
+    "y" : 161
+  },
+  "madrid_5-6" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 58,
+    "y" : 431
+  },
+  "madrid_5-6-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 58,
+    "y" : 331
+  },
+  "madrid_5-7" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 756,
+    "y" : 20
+  },
+  "madrid_5-7-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 544,
+    "y" : 20
+  },
+  "madrid_5-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 270,
+    "y" : 601
+  },
+  "madrid_6" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 631,
+    "y" : 142
+  },
+  "madrid_6-11" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 58,
+    "y" : 471
+  },
+  "madrid_6-11-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 53,
+    "x" : 65,
+    "y" : 171
+  },
+  "madrid_6-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 594,
+    "y" : 122
+  },
+  "madrid_7" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 476,
+    "y" : 181
+  },
+  "madrid_7-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 594,
+    "y" : 102
+  },
+  "madrid_8" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 219,
+    "y" : 751
+  },
+  "madrid_8-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 633,
+    "y" : 122
+  },
+  "madrid_9" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 258,
+    "y" : 751
+  },
+  "madrid_9-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 475,
+    "y" : 141
+  },
+  "mail" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 807,
+    "y" : 418
+  },
+  "mail-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 635,
+    "y" : 639
+  },
+  "marina" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 18,
+    "x" : 631,
+    "y" : 722
+  },
+  "marina-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 18,
+    "x" : 613,
+    "y" : 722
+  },
+  "marseille" : {
+    "height" : 15,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 703,
+    "y" : 184
+  },
+  "marseille-1" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 54,
+    "x" : 0,
+    "y" : 727
+  },
+  "marseille-1-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 54,
+    "x" : 0,
+    "y" : 683
+  },
+  "marseille-2" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 54,
+    "x" : 0,
+    "y" : 705
+  },
+  "marseille-2-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 54,
+    "x" : 0,
+    "y" : 661
+  },
+  "marseille-hover" : {
+    "height" : 15,
+    "pixelRatio" : 1,
+    "width" : 36,
+    "x" : 667,
+    "y" : 184
+  },
+  "media_shop" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 464,
+    "y" : 524
+  },
+  "media_shop-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 392,
+    "y" : 474
+  },
+  "milan-1" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 32,
+    "x" : 396,
+    "y" : 322
+  },
+  "milan-1-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 32,
+    "x" : 392,
+    "y" : 454
+  },
+  "milan-2" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 32,
+    "x" : 300,
+    "y" : 697
+  },
+  "milan-2-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 32,
+    "x" : 396,
+    "y" : 342
+  },
+  "milan-3" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 32,
+    "x" : 814,
+    "y" : 164
+  },
+  "milan-3-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 32,
+    "x" : 330,
+    "y" : 267
+  },
+  "milan-4" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 32,
+    "x" : 330,
+    "y" : 287
+  },
+  "milan-4-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 32,
+    "x" : 396,
+    "y" : 362
+  },
+  "milan-5" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 32,
+    "x" : 395,
+    "y" : 418
+  },
+  "milan-5-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 32,
+    "x" : 396,
+    "y" : 382
+  },
+  "military" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 18,
+    "x" : 644,
+    "y" : 828
+  },
+  "minsk" : {
+    "height" : 16,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 740,
+    "y" : 232
+  },
+  "minsk-1" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 46,
+    "x" : 54,
+    "y" : 731
+  },
+  "minsk-1-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 46,
+    "x" : 54,
+    "y" : 687
+  },
+  "minsk-2" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 46,
+    "x" : 130,
+    "y" : 107
+  },
+  "minsk-2-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 46,
+    "x" : 121,
+    "y" : 129
+  },
+  "minsk-3" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 46,
+    "x" : 57,
+    "y" : 643
+  },
+  "minsk-3-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 46,
+    "x" : 54,
+    "y" : 709
+  },
+  "minsk-hover" : {
+    "height" : 16,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 740,
+    "y" : 248
+  },
+  "mobile_phone" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 329,
+    "y" : 757
+  },
+  "mobile_phone-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 779,
+    "y" : 665
+  },
+  "monument" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 18,
+    "x" : 827,
+    "y" : 715
+  },
+  "monument-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 18,
+    "x" : 827,
+    "y" : 671
+  },
+  "moscow-1" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 263,
+    "y" : 621
+  },
+  "moscow-1-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 177,
+    "y" : 187
+  },
+  "moscow-10" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 276,
+    "y" : 406
+  },
+  "moscow-10-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 276,
+    "y" : 362
+  },
+  "moscow-11" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 196,
+    "y" : 311
+  },
+  "moscow-11-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 216,
+    "y" : 138
+  },
+  "moscow-12" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 258,
+    "y" : 707
+  },
+  "moscow-12-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 276,
+    "y" : 450
+  },
+  "moscow-13" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 182,
+    "y" : 793
+  },
+  "moscow-13-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 263,
+    "y" : 643
+  },
+  "moscow-15" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 222,
+    "y" : 685
+  },
+  "moscow-15-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 219,
+    "y" : 729
+  },
+  "moscow-2" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 359,
+    "y" : 140
+  },
+  "moscow-2-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 276,
+    "y" : 318
+  },
+  "moscow-3" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 182,
+    "y" : 815
+  },
+  "moscow-3-8" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 57,
+    "x" : 0,
+    "y" : 595
+  },
+  "moscow-3-8-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 57,
+    "x" : 0,
+    "y" : 573
+  },
+  "moscow-3-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 276,
+    "y" : 428
+  },
+  "moscow-4" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 276,
+    "y" : 384
+  },
+  "moscow-4-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 276,
+    "y" : 296
+  },
+  "moscow-5" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 270,
+    "y" : 579
+  },
+  "moscow-5-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 183,
+    "y" : 685
+  },
+  "moscow-6" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 276,
+    "y" : 472
+  },
+  "moscow-6-7" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 57,
+    "x" : 0,
+    "y" : 639
+  },
+  "moscow-6-7-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 57,
+    "x" : 0,
+    "y" : 551
+  },
+  "moscow-6-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 216,
+    "y" : 771
+  },
+  "moscow-7" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 275,
+    "y" : 535
+  },
+  "moscow-7-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 276,
+    "y" : 340
+  },
+  "moscow-8" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 144,
+    "y" : 652
+  },
+  "moscow-8-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 180,
+    "y" : 707
+  },
+  "moscow-9" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 219,
+    "y" : 707
+  },
+  "moscow-9-10" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 57,
+    "x" : 0,
+    "y" : 529
+  },
+  "moscow-9-10-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 57,
+    "x" : 0,
+    "y" : 617
+  },
+  "moscow-9-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 140,
+    "y" : 716
+  },
+  "moscow-d1" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 46,
+    "x" : 130,
+    "y" : 85
+  },
+  "moscow-d1-aeroexpress" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 64,
+    "x" : 0,
+    "y" : 225
+  },
+  "moscow-d1-aeroexpress-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 64,
+    "x" : 0,
+    "y" : 203
+  },
+  "moscow-d1-d4-aeroexpress" : {
+    "height" : 23,
+    "pixelRatio" : 1,
+    "width" : 86,
+    "x" : 118,
+    "y" : 0
+  },
+  "moscow-d1-d4-aeroexpress-hover" : {
+    "height" : 23,
+    "pixelRatio" : 1,
+    "width" : 86,
+    "x" : 0,
+    "y" : 44
+  },
+  "moscow-d1-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 46,
+    "x" : 57,
+    "y" : 621
+  },
+  "moscow-d2" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 46,
+    "x" : 54,
+    "y" : 665
+  },
+  "moscow-d2-d4" : {
+    "height" : 23,
+    "pixelRatio" : 1,
+    "width" : 68,
+    "x" : 0,
+    "y" : 134
+  },
+  "moscow-d2-d4-hover" : {
+    "height" : 23,
+    "pixelRatio" : 1,
+    "width" : 68,
+    "x" : 0,
+    "y" : 111
+  },
+  "moscow-d2-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 46,
+    "x" : 50,
+    "y" : 771
+  },
+  "moscow-d3" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 46,
+    "x" : 133,
+    "y" : 63
+  },
+  "moscow-d3-hover" : {
+    "height" : 23,
+    "pixelRatio" : 1,
+    "width" : 47,
+    "x" : 57,
+    "y" : 575
+  },
+  "moscow-d4" : {
+    "height" : 23,
+    "pixelRatio" : 1,
+    "width" : 46,
+    "x" : 57,
+    "y" : 598
+  },
+  "moscow-d4-aeroexpress" : {
+    "height" : 23,
+    "pixelRatio" : 1,
+    "width" : 64,
+    "x" : 0,
+    "y" : 180
+  },
+  "moscow-d4-aeroexpress-hover" : {
+    "height" : 23,
+    "pixelRatio" : 1,
+    "width" : 65,
+    "x" : 0,
+    "y" : 157
+  },
+  "moscow-d4-hover" : {
+    "height" : 23,
+    "pixelRatio" : 1,
+    "width" : 47,
+    "x" : 86,
+    "y" : 44
+  },
+  "moscow-m" : {
+    "height" : 16,
+    "pixelRatio" : 1,
+    "width" : 21,
+    "x" : 472,
+    "y" : 458
+  },
+  "moscow-m-hover" : {
+    "height" : 16,
+    "pixelRatio" : 1,
+    "width" : 21,
+    "x" : 333,
+    "y" : 805
+  },
+  "moscow-mcc" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 180,
+    "y" : 729
+  },
+  "moscow-mcc-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 275,
+    "y" : 557
+  },
+  "moscow-ref1" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 591,
+    "y" : 181
+  },
+  "moscow-ref1-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 476,
+    "y" : 220
+  },
+  "moscow-ref10" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 362,
+    "y" : 204
+  },
+  "moscow-ref10-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 362,
+    "y" : 224
+  },
+  "moscow-ref11" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 362,
+    "y" : 184
+  },
+  "moscow-ref11-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 515,
+    "y" : 181
+  },
+  "moscow-ref12" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 400,
+    "y" : 162
+  },
+  "moscow-ref12-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 709,
+    "y" : 124
+  },
+  "moscow-ref13" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 672,
+    "y" : 124
+  },
+  "moscow-ref13-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 670,
+    "y" : 144
+  },
+  "moscow-ref14" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 553,
+    "y" : 181
+  },
+  "moscow-ref14-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 282,
+    "y" : 276
+  },
+  "moscow-ref15" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 783,
+    "y" : 124
+  },
+  "moscow-ref15-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 783,
+    "y" : 104
+  },
+  "moscow-ref16" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 554,
+    "y" : 161
+  },
+  "moscow-ref16-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 629,
+    "y" : 181
+  },
+  "moscow-ref2" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 588,
+    "y" : 220
+  },
+  "moscow-ref2-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 744,
+    "y" : 144
+  },
+  "moscow-ref3" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 551,
+    "y" : 220
+  },
+  "moscow-ref3-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 707,
+    "y" : 144
+  },
+  "moscow-ref4" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 362,
+    "y" : 244
+  },
+  "moscow-ref4-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 400,
+    "y" : 202
+  },
+  "moscow-ref5" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 400,
+    "y" : 182
+  },
+  "moscow-ref5-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 709,
+    "y" : 104
+  },
+  "moscow-ref6" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 809,
+    "y" : 20
+  },
+  "moscow-ref6-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 746,
+    "y" : 124
+  },
+  "moscow-ref7" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 400,
+    "y" : 222
+  },
+  "moscow-ref7-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 514,
+    "y" : 220
+  },
+  "moscow-ref8" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 140,
+    "y" : 774
+  },
+  "moscow-ref8-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 672,
+    "y" : 104
+  },
+  "moscow-ref9" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 625,
+    "y" : 221
+  },
+  "moscow-ref9-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 37,
+    "x" : 746,
+    "y" : 104
+  },
+  "motorcycle-parking" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 249,
+    "y" : 793
+  },
+  "motorcycle-parking-hover" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 334,
+    "y" : 191
+  },
+  "motorcycle_shop" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 587,
+    "y" : 571
+  },
+  "motorcycle_shop-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 411,
+    "y" : 765
+  },
+  "mountain" : {
+    "height" : 17,
+    "pixelRatio" : 1,
+    "width" : 23,
+    "x" : 661,
+    "y" : 392
+  },
+  "mountain-hover" : {
+    "height" : 17,
+    "pixelRatio" : 1,
+    "width" : 23,
+    "x" : 305,
+    "y" : 782
+  },
+  "munchen-u1" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 27,
+    "x" : 560,
+    "y" : 365
+  },
+  "munchen-u1-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 27,
+    "x" : 514,
+    "y" : 320
+  },
+  "munchen-u2" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 545,
+    "y" : 280
+  },
+  "munchen-u2-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 544,
+    "y" : 300
+  },
+  "munchen-u3" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 489,
+    "y" : 280
+  },
+  "munchen-u3-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 492,
+    "y" : 260
+  },
+  "munchen-u4" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 669,
+    "y" : 239
+  },
+  "munchen-u4-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 334,
+    "y" : 247
+  },
+  "munchen-u5" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 464,
+    "y" : 260
+  },
+  "munchen-u5-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 458,
+    "y" : 320
+  },
+  "munchen-u6" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 604,
+    "y" : 261
+  },
+  "munchen-u6-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 697,
+    "y" : 239
+  },
+  "munchen-u7" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 517,
+    "y" : 280
+  },
+  "munchen-u7-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 430,
+    "y" : 317
+  },
+  "munchen-u8" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 433,
+    "y" : 277
+  },
+  "munchen-u8-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 684,
+    "y" : 309
+  },
+  "museum" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 694,
+    "y" : 373
+  },
+  "museum-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 571,
+    "y" : 433
+  },
+  "music_shop" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 667,
+    "y" : 433
+  },
+  "music_shop-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 435,
+    "y" : 789
+  },
+  "muslim" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 519,
+    "y" : 409
+  },
+  "muslim-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 707,
+    "y" : 629
+  },
+  "napoli-1" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 33,
+    "x" : 314,
+    "y" : 571
+  },
+  "napoli-1-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 33,
+    "x" : 314,
+    "y" : 551
+  },
+  "napoli-2" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 34,
+    "x" : 396,
+    "y" : 302
+  },
+  "napoli-2-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 34,
+    "x" : 362,
+    "y" : 284
+  },
+  "napoli-6" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 34,
+    "x" : 398,
+    "y" : 282
+  },
+  "napoli-6-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 34,
+    "x" : 309,
+    "y" : 591
+  },
+  "nnov" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 711,
+    "y" : 762
+  },
+  "nnov-1" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 258,
+    "y" : 729
+  },
+  "nnov-1-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 276,
+    "y" : 494
+  },
+  "nnov-2" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 177,
+    "y" : 771
+  },
+  "nnov-2-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 261,
+    "y" : 685
+  },
+  "nnov-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 733,
+    "y" : 762
+  },
+  "novosibirsk" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 733,
+    "y" : 784
+  },
+  "novosibirsk-1" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 195,
+    "y" : 553
+  },
+  "novosibirsk-1-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 156,
+    "y" : 432
+  },
+  "novosibirsk-2" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 156,
+    "y" : 498
+  },
+  "novosibirsk-2-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 202,
+    "y" : 245
+  },
+  "novosibirsk-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 718,
+    "y" : 806
+  },
+  "nurnberg-u1" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 27,
+    "x" : 452,
+    "y" : 365
+  },
+  "nurnberg-u1-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 27,
+    "x" : 479,
+    "y" : 365
+  },
+  "nurnberg-u2" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 302,
+    "y" : 677
+  },
+  "nurnberg-u2-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 796,
+    "y" : 264
+  },
+  "nurnberg-u3" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 572,
+    "y" : 300
+  },
+  "nurnberg-u3-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 628,
+    "y" : 305
+  },
+  "optician" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 752,
+    "y" : 521
+  },
+  "optician-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 476,
+    "y" : 693
+  },
+  "outdoor-shop" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 613,
+    "y" : 457
+  },
+  "outdoor-shop-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 779,
+    "y" : 689
+  },
+  "paris" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 579,
+    "y" : 784
+  },
+  "paris-1" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 183,
+    "y" : 663
+  },
+  "paris-1-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 150,
+    "y" : 586
+  },
+  "paris-10" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 236,
+    "y" : 314
+  },
+  "paris-10-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 196,
+    "y" : 509
+  },
+  "paris-11" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 143,
+    "y" : 630
+  },
+  "paris-11-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 196,
+    "y" : 399
+  },
+  "paris-12" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 196,
+    "y" : 333
+  },
+  "paris-12-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 242,
+    "y" : 248
+  },
+  "paris-13" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 196,
+    "y" : 377
+  },
+  "paris-13-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 236,
+    "y" : 446
+  },
+  "paris-14" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 176,
+    "y" : 126
+  },
+  "paris-14-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 196,
+    "y" : 465
+  },
+  "paris-15" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 155,
+    "y" : 542
+  },
+  "paris-15-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 688,
+    "y" : 82
+  },
+  "paris-2" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 242,
+    "y" : 270
+  },
+  "paris-2-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 235,
+    "y" : 556
+  },
+  "paris-3" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 236,
+    "y" : 292
+  },
+  "paris-3-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 223,
+    "y" : 663
+  },
+  "paris-3b" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 196,
+    "y" : 289
+  },
+  "paris-3b-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 195,
+    "y" : 531
+  },
+  "paris-4" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 162,
+    "y" : 234
+  },
+  "paris-4-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 162,
+    "y" : 256
+  },
+  "paris-5" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 236,
+    "y" : 380
+  },
+  "paris-5-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 236,
+    "y" : 358
+  },
+  "paris-6" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 150,
+    "y" : 564
+  },
+  "paris-6-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 155,
+    "y" : 520
+  },
+  "paris-7" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 256,
+    "y" : 138
+  },
+  "paris-7-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 768,
+    "y" : 82
+  },
+  "paris-7b" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 156,
+    "y" : 476
+  },
+  "paris-7b-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 143,
+    "y" : 608
+  },
+  "paris-8" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 156,
+    "y" : 366
+  },
+  "paris-8-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 236,
+    "y" : 336
+  },
+  "paris-9" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 196,
+    "y" : 443
+  },
+  "paris-9-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 190,
+    "y" : 597
+  },
+  "paris-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 667,
+    "y" : 762
+  },
+  "park" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 623,
+    "y" : 784
+  },
+  "park-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 569,
+    "y" : 740
+  },
+  "park2" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 371,
+    "y" : 304
+  },
+  "park2-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 271,
+    "y" : 821
+  },
+  "parking" : {
+    "height" : 17,
+    "pixelRatio" : 1,
+    "width" : 15,
+    "x" : 831,
+    "y" : 435
+  },
+  "parking-hover" : {
+    "height" : 17,
+    "pixelRatio" : 1,
+    "width" : 15,
+    "x" : 831,
+    "y" : 418
+  },
+  "perugia" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 747,
+    "y" : 742
+  },
+  "perugia-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 782,
+    "y" : 803
+  },
+  "pet" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 707,
+    "y" : 677
+  },
+  "pet-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 691,
+    "y" : 421
+  },
+  "pet_grooming" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 759,
+    "y" : 401
+  },
+  "pet_grooming-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 718,
+    "y" : 373
+  },
+  "pharmacy" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 401,
+    "y" : 717
+  },
+  "pharmacy-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 685,
+    "y" : 457
+  },
+  "phone" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 16,
+    "x" : 662,
+    "y" : 828
+  },
+  "phone-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 16,
+    "x" : 694,
+    "y" : 828
+  },
+  "photo-shop" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 447,
+    "y" : 412
+  },
+  "photo-shop-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 755,
+    "y" : 641
+  },
+  "picnic_table" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 776,
+    "y" : 521
+  },
+  "picnic_table-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 584,
+    "y" : 505
+  },
+  "pitch" : {
+    "height" : 17,
+    "pixelRatio" : 1,
+    "width" : 21,
+    "x" : 710,
+    "y" : 701
+  },
+  "pitch-hover" : {
+    "height" : 17,
+    "pixelRatio" : 1,
+    "width" : 21,
+    "x" : 390,
+    "y" : 804
+  },
+  "place-of-worship" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 783,
+    "y" : 401
+  },
+  "place-of-worship-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 728,
+    "y" : 497
+  },
+  "playground" : {
+    "height" : 16,
+    "pixelRatio" : 1,
+    "width" : 18,
+    "x" : 354,
+    "y" : 805
+  },
+  "playground-hover" : {
+    "height" : 16,
+    "pixelRatio" : 1,
+    "width" : 18,
+    "x" : 372,
+    "y" : 805
+  },
+  "police" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 803,
+    "y" : 670
+  },
+  "police-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 608,
+    "y" : 481
+  },
+  "postbox" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 17,
+    "x" : 829,
+    "y" : 466
+  },
+  "postbox-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 17,
+    "x" : 829,
+    "y" : 0
+  },
+  "prison" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 371,
+    "y" : 600
+  },
+  "prison-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 517,
+    "y" : 458
+  },
+  "recycle" : {
+    "height" : 21,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 670,
+    "y" : 371
+  },
+  "recycle-hover" : {
+    "height" : 21,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 584,
+    "y" : 806
+  },
+  "renfe" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 802,
+    "y" : 800
+  },
+  "renfe-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 822,
+    "y" : 820
+  },
+  "rennes" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 601,
+    "y" : 784
+  },
+  "rennes-A" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 728,
+    "y" : 82
+  },
+  "rennes-A-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 216,
+    "y" : 160
+  },
+  "rennes-B" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 235,
+    "y" : 534
+  },
+  "rennes-B-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 156,
+    "y" : 344
+  },
+  "rennes-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 701,
+    "y" : 740
+  },
+  "restaurant" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 795,
+    "y" : 586
+  },
+  "restaurant-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 771,
+    "y" : 593
+  },
+  "rome-A" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 34,
+    "x" : 297,
+    "y" : 737
+  },
+  "rome-A-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 34,
+    "x" : 297,
+    "y" : 717
+  },
+  "rome-B" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 34,
+    "x" : 400,
+    "y" : 242
+  },
+  "rome-B-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 34,
+    "x" : 399,
+    "y" : 262
+  },
+  "rome-B1" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 438,
+    "y" : 102
+  },
+  "rome-B1-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 39,
+    "x" : 516,
+    "y" : 102
+  },
+  "rome-C" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 35,
+    "x" : 179,
+    "y" : 81
+  },
+  "rome-C-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 35,
+    "x" : 811,
+    "y" : 62
+  },
+  "rouen" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 255,
+    "y" : 771
+  },
+  "rouen-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 767,
+    "y" : 737
+  },
+  "rugby" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 563,
+    "y" : 619
+  },
+  "rugby-1" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 395,
+    "y" : 549
+  },
+  "rugby-2" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 440,
+    "y" : 524
+  },
+  "rugby-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 632,
+    "y" : 261
+  },
+  "rugby-hover-1" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 392,
+    "y" : 499
+  },
+  "rugby-hover-2" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 368,
+    "y" : 478
+  },
+  "s-bahn" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 667,
+    "y" : 784
+  },
+  "s-bahn-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 689,
+    "y" : 762
+  },
+  "samara" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 21,
+    "x" : 606,
+    "y" : 529
+  },
+  "samara-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 21,
+    "x" : 825,
+    "y" : 352
+  },
+  "sauna" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 705,
+    "y" : 284
+  },
+  "sauna-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 469,
+    "y" : 385
+  },
+  "school" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 790,
+    "y" : 353
+  },
+  "school-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 805,
+    "y" : 490
+  },
+  "seafood-shop" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 483,
+    "y" : 765
+  },
+  "seafood-shop-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 369,
+    "y" : 821
+  },
+  "shinto" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 731,
+    "y" : 650
+  },
+  "shinto-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 524,
+    "y" : 693
+  },
+  "shoes" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 411,
+    "y" : 789
+  },
+  "shoes-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 357,
+    "y" : 781
+  },
+  "soccer" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 537,
+    "y" : 813
+  },
+  "soccer-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 619,
+    "y" : 433
+  },
+  "social_facility" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 711,
+    "y" : 397
+  },
+  "social_facility-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 753,
+    "y" : 329
+  },
+  "spb" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 563,
+    "y" : 643
+  },
+  "spb-1" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 296,
+    "y" : 197
+  },
+  "spb-1-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 398,
+    "y" : 140
+  },
+  "spb-2" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 296,
+    "y" : 109
+  },
+  "spb-2-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 362,
+    "y" : 162
+  },
+  "spb-3" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 277,
+    "y" : 799
+  },
+  "spb-3-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 296,
+    "y" : 131
+  },
+  "spb-4" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 296,
+    "y" : 175
+  },
+  "spb-4-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 296,
+    "y" : 219
+  },
+  "spb-5" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 142,
+    "y" : 738
+  },
+  "spb-5-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 38,
+    "x" : 296,
+    "y" : 153
+  },
+  "spb-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 782,
+    "y" : 823
+  },
+  "sports" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 699,
+    "y" : 565
+  },
+  "sports-centre" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 747,
+    "y" : 593
+  },
+  "sports-centre-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 347,
+    "y" : 589
+  },
+  "sports-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 651,
+    "y" : 529
+  },
+  "spring" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 453,
+    "y" : 436
+  },
+  "spring-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 584,
+    "y" : 529
+  },
+  "stadium" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 814,
+    "y" : 370
+  },
+  "stadium-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 499,
+    "y" : 434
+  },
+  "stadium2" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 473,
+    "y" : 717
+  },
+  "stadium2-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 661,
+    "y" : 457
+  },
+  "stationery_shop" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 452,
+    "y" : 340
+  },
+  "stationery_shop-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 729,
+    "y" : 284
+  },
+  "subway" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 775,
+    "y" : 759
+  },
+  "subway-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 740,
+    "y" : 806
+  },
+  "subway-m" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 302,
+    "y" : 649
+  },
+  "subway-m-hover" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 315,
+    "y" : 335
+  },
+  "sweets" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 803,
+    "y" : 716
+  },
+  "sweets-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 435,
+    "y" : 765
+  },
+  "swimming" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 565,
+    "y" : 457
+  },
+  "swimming-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 563,
+    "y" : 571
+  },
+  "tailor" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 521,
+    "y" : 717
+  },
+  "tailor-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 657,
+    "y" : 285
+  },
+  "taoist" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 491,
+    "y" : 620
+  },
+  "taoist-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 401,
+    "y" : 741
+  },
+  "tashkent" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 645,
+    "y" : 347
+  },
+  "tashkent-1" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 43,
+    "x" : 106,
+    "y" : 547
+  },
+  "tashkent-1-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 43,
+    "x" : 446,
+    "y" : 38
+  },
+  "tashkent-2" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 43,
+    "x" : 489,
+    "y" : 38
+  },
+  "tashkent-2-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 43,
+    "x" : 360,
+    "y" : 38
+  },
+  "tashkent-3" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 43,
+    "x" : 532,
+    "y" : 40
+  },
+  "tashkent-3-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 43,
+    "x" : 297,
+    "y" : 22
+  },
+  "tashkent-4" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 43,
+    "x" : 254,
+    "y" : 22
+  },
+  "tashkent-4-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 43,
+    "x" : 403,
+    "y" : 38
+  },
+  "tashkent-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 728,
+    "y" : 329
+  },
+  "tbilisi" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 723,
+    "y" : 545
+  },
+  "tbilisi-1" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 42,
+    "x" : 360,
+    "y" : 60
+  },
+  "tbilisi-1-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 42,
+    "x" : 575,
+    "y" : 40
+  },
+  "tbilisi-2" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 42,
+    "x" : 617,
+    "y" : 40
+  },
+  "tbilisi-2-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 42,
+    "x" : 214,
+    "y" : 69
+  },
+  "tbilisi-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 803,
+    "y" : 694
+  },
+  "tennis" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 493,
+    "y" : 458
+  },
+  "tennis-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 635,
+    "y" : 591
+  },
+  "theatre" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 345,
+    "y" : 821
+  },
+  "theatre-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 404,
+    "y" : 693
+  },
+  "theme_park" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 755,
+    "y" : 665
+  },
+  "theme_park-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 515,
+    "y" : 620
+  },
+  "ticket-shop" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 563,
+    "y" : 547
+  },
+  "ticket-shop-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 613,
+    "y" : 385
+  },
+  "tire-repair" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 731,
+    "y" : 698
+  },
+  "tire-repair-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 742,
+    "y" : 353
+  },
+  "toilet" : {
+    "height" : 15,
+    "pixelRatio" : 1,
+    "width" : 17,
+    "x" : 428,
+    "y" : 387
+  },
+  "toilet-hover" : {
+    "height" : 15,
+    "pixelRatio" : 1,
+    "width" : 17,
+    "x" : 377,
+    "y" : 765
+  },
+  "toulouse" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 657,
+    "y" : 740
+  },
+  "toulouse-A" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 156,
+    "y" : 300
+  },
+  "toulouse-A-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 196,
+    "y" : 421
+  },
+  "toulouse-B" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 236,
+    "y" : 424
+  },
+  "toulouse-B-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 156,
+    "y" : 410
+  },
+  "toulouse-C" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 236,
+    "y" : 468
+  },
+  "toulouse-C-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 156,
+    "y" : 454
+  },
+  "toulouse-D" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 236,
+    "y" : 402
+  },
+  "toulouse-D-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 236,
+    "y" : 490
+  },
+  "toulouse-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 777,
+    "y" : 781
+  },
+  "tourism" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 611,
+    "y" : 569
+  },
+  "tourism-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 704,
+    "y" : 517
+  },
+  "town" : {
+    "height" : 11,
+    "pixelRatio" : 1,
+    "width" : 10,
+    "x" : 814,
+    "y" : 304
+  },
+  "town-hover" : {
+    "height" : 10,
+    "pixelRatio" : 1,
+    "width" : 10,
+    "x" : 310,
+    "y" : 266
+  },
+  "toys" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 560,
+    "y" : 481
+  },
+  "toys-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 747,
+    "y" : 569
+  },
+  "train" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 711,
+    "y" : 784
+  },
+  "train-aeroexpress" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 236,
+    "y" : 512
+  },
+  "train-aeroexpress-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 40,
+    "x" : 256,
+    "y" : 116
+  },
+  "train-dot" : {
+    "height" : 13,
+    "pixelRatio" : 1,
+    "width" : 12,
+    "x" : 789,
+    "y" : 737
+  },
+  "train-dot-hover" : {
+    "height" : 13,
+    "pixelRatio" : 1,
+    "width" : 12,
+    "x" : 162,
+    "y" : 195
+  },
+  "train-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 652,
+    "y" : 806
+  },
+  "train-m" : {
+    "height" : 29,
+    "pixelRatio" : 1,
+    "width" : 29,
+    "x" : 185,
+    "y" : 23
+  },
+  "train-m-hover" : {
+    "height" : 29,
+    "pixelRatio" : 1,
+    "width" : 29,
+    "x" : 185,
+    "y" : 52
+  },
+  "tram" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 613,
+    "y" : 740
+  },
+  "tram-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 645,
+    "y" : 784
+  },
+  "tram-m" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 343,
+    "y" : 419
+  },
+  "tram-m-hover" : {
+    "height" : 28,
+    "pixelRatio" : 1,
+    "width" : 28,
+    "x" : 343,
+    "y" : 307
+  },
+  "travel-agency" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 683,
+    "y" : 645
+  },
+  "travel-agency-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 709,
+    "y" : 469
+  },
+  "turnstile" : {
+    "height" : 17,
+    "pixelRatio" : 1,
+    "width" : 17,
+    "x" : 829,
+    "y" : 501
+  },
+  "turnstile-hover" : {
+    "height" : 17,
+    "pixelRatio" : 1,
+    "width" : 17,
+    "x" : 829,
+    "y" : 484
+  },
+  "u-bahn" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 802,
+    "y" : 820
+  },
+  "u-bahn-hover" : {
+    "height" : 20,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 587,
+    "y" : 365
+  },
+  "veterinary" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 425,
+    "y" : 741
+  },
+  "veterinary-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 584,
+    "y" : 481
+  },
+  "viewpoint" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 776,
+    "y" : 497
+  },
+  "viewpoint-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 659,
+    "y" : 669
+  },
+  "vk" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 536,
+    "y" : 482
+  },
+  "vk-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 709,
+    "y" : 445
+  },
+  "volcano" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 755,
+    "y" : 784
+  },
+  "volcano-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 22,
+    "x" : 824,
+    "y" : 541
+  },
+  "volgograd" : {
+    "height" : 23,
+    "pixelRatio" : 1,
+    "width" : 23,
+    "x" : 569,
+    "y" : 717
+  },
+  "volgograd-hover" : {
+    "height" : 23,
+    "pixelRatio" : 1,
+    "width" : 23,
+    "x" : 561,
+    "y" : 813
+  },
+  "volleyball" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 368,
+    "y" : 527
+  },
+  "volleyball-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 332,
+    "y" : 693
+  },
+  "waste-basket" : {
+    "height" : 17,
+    "pixelRatio" : 1,
+    "width" : 16,
+    "x" : 710,
+    "y" : 828
+  },
+  "waste-basket-hover" : {
+    "height" : 17,
+    "pixelRatio" : 1,
+    "width" : 16,
+    "x" : 429,
+    "y" : 402
+  },
+  "water" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 18,
+    "x" : 315,
+    "y" : 799
+  },
+  "water-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 18,
+    "x" : 827,
+    "y" : 693
+  },
+  "waterfall" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 762,
+    "y" : 806
+  },
+  "waterfall-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 20,
+    "x" : 755,
+    "y" : 762
+  },
+  "wetland" : {
+    "height" : 16,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 428,
+    "y" : 438
+  },
+  "windmill" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 476,
+    "y" : 340
+  },
+  "windmill-hover" : {
+    "height" : 25,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 464,
+    "y" : 499
+  },
+  "workout" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 15,
+    "x" : 655,
+    "y" : 367
+  },
+  "workout-hover" : {
+    "height" : 18,
+    "pixelRatio" : 1,
+    "width" : 15,
+    "x" : 725,
+    "y" : 239
+  },
+  "yerevan" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 820,
+    "y" : 122
+  },
+  "yerevan-hover" : {
+    "height" : 22,
+    "pixelRatio" : 1,
+    "width" : 25,
+    "x" : 620,
+    "y" : 343
+  },
+  "zoo" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 656,
+    "y" : 261
+  },
+  "zoo-hover" : {
+    "height" : 24,
+    "pixelRatio" : 1,
+    "width" : 24,
+    "x" : 699,
+    "y" : 541
+  }
+}

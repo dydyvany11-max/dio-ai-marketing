@@ -41,7 +41,7 @@ def analyze_mentions(
 
     compiled = []
     for term in terms:
-        # Phrase-aware regex with light boundaries to avoid random substring matches.
+      
         pattern = re.compile(rf"(?<!\w){re.escape(term)}(?!\w)", re.IGNORECASE | re.UNICODE)
         compiled.append((term, pattern))
 

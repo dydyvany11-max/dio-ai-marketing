@@ -29,6 +29,7 @@ from src.api.services.vk_analysis_helpers import (
     _build_audience_profile,
     _extract_ai_search_tags,
     _extract_ai_topic_labels,
+    _filter_tags_by_group_context,
     _is_query_term,
     _is_query_word,
     _is_group_auth_restriction,
@@ -38,7 +39,7 @@ from src.api.services.vk_analysis_helpers import (
 from src.api.services.vk_ai import GigaChatVKClient
 from src.api.services.vk_client import VKClient
 from src.api.services.vk_knowledge import VKKnowledgeStore
-from src.api.services.vk_local_analysis import build_local_vk_insights
+from src.api.services.vk_local_analysis import build_local_vk_insights_with_context
 from src.api.services.vk_public import (
     fetch_public_group_data,
     has_vk_browser_profile,
@@ -708,15 +709,18 @@ def vk_group_analyze(
         limitations=limitations,
     )
 
-    local_ai_payload, local_ai_status = build_local_vk_insights(
+    local_ai_payload, local_ai_status = build_local_vk_insights_with_context(
         group_name=group.get("name", ""),
         screen_name=group.get("screen_name") or normalized,
         posts=posts[: max(1, min(len(posts), 50))],
         metrics=metrics.model_dump(),
+        group_description=group.get("description"),
+        group_activity=group.get("activity"),
     )
     ai_insights = VKGroupAIInsights(**local_ai_payload)
     ai_status = local_ai_status
     recommendations: list[dict] = []
+    gigachat_identity_tags: list[str] = []
 
     if is_gigachat_configured():
         settings = load_gigachat_settings()
@@ -757,6 +761,20 @@ def vk_group_analyze(
                 for rec in (ai_result.recommendations or [])
                 if rec.title and rec.action and rec.rationale
             ][:5]
+            try:
+                gigachat_identity_tags = client.generate_search_tags_from_group(
+                    group={
+                        "name": group.get("name"),
+                        "screen_name": group.get("screen_name"),
+                        "activity": group.get("activity"),
+                        "description": group.get("description"),
+                        "site": group.get("site"),
+                    },
+                    language=payload.language,
+                    limit=16,
+                )
+            except Exception:
+                gigachat_identity_tags = []
             ai_status = {
                 "enabled": True,
                 "available": True,
@@ -777,38 +795,48 @@ def vk_group_analyze(
                 "message": f"GigaChat unavailable, used local analysis instead: {str(exc)[:240]}",
             }
 
-    ai_tags = _extract_ai_search_tags(ai_insights, limit=16)
+    ai_tags = gigachat_identity_tags or _extract_ai_search_tags(ai_insights, limit=16)
     if not ai_tags:
         ai_tags = [
             str(tag).strip().lower()
             for tag in (local_ai_payload.get("search_tags") or [])
             if _is_query_term(str(tag))
         ]
-    if ai_tags:
-        ai_insights.search_tags = ai_tags
+    use_ai_tags_only = bool(ai_status.get("provider") == "gigachat" and ai_status.get("available"))
+    if use_ai_tags_only and ai_tags:
+        ai_tags = _filter_tags_by_group_context(
+            ai_tags,
+            group_name=group.get("name", ""),
+            group_description=group.get("description"),
+            group_activity=group.get("activity"),
+            limit=16,
+        )
+    ai_insights.search_tags = ai_tags
     ai_topic_labels = _extract_ai_topic_labels(ai_insights, limit=4)
 
     competitors_found: list[dict] = []
-    for token in _resolve_access_tokens():
-        try:
-            competitors_found = _search_vk_competitors(
-                vk_client,
-                token,
-                current_group_id=group_id,
-                current_screen_name=group.get("screen_name"),
-                current_name=group.get("name", ""),
-                current_activity=group.get("activity"),
-                current_description=group.get("description"),
-                topic_clusters=[],
-                source_posts=posts,
-                ai_tags=ai_tags,
-                topic_labels=ai_topic_labels,
-                limit=5,
-            )
-            if competitors_found:
-                break
-        except Exception:
-            continue
+    if not (use_ai_tags_only and not ai_tags):
+        for token in _resolve_access_tokens():
+            try:
+                competitors_found = _search_vk_competitors(
+                    vk_client,
+                    token,
+                    current_group_id=group_id,
+                    current_screen_name=group.get("screen_name"),
+                    current_name=group.get("name", ""),
+                    current_activity=group.get("activity"),
+                    current_description=group.get("description"),
+                    topic_clusters=[],
+                    source_posts=posts,
+                    ai_tags=ai_tags,
+                    topic_labels=ai_topic_labels,
+                    use_ai_tags_only=use_ai_tags_only and bool(ai_tags),
+                    limit=5,
+                )
+                if competitors_found:
+                    break
+            except Exception:
+                continue
 
     audience_profile = _build_audience_profile(ai_insights, metrics)
 

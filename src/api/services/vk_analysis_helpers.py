@@ -123,33 +123,66 @@ def _search_vk_competitors(
     source_posts: list[dict] | None = None,
     ai_tags: list[str] | None = None,
     topic_labels: list[str] | None = None,
+    use_ai_tags_only: bool = False,
     limit: int = 5,
 ) -> list[dict]:
     source_posts = source_posts or []
-    normalized_ai_tags = [tag.strip().lower() for tag in (ai_tags or []) if _is_query_term(tag)]
+    normalized_ai_tags = _normalize_terms(ai_tags or [], limit=16)
     topic_labels = [label.strip() for label in (topic_labels or []) if str(label).strip()]
 
     banned_name_terms = _brand_terms(current_screen_name or "")
+    context_terms = {
+        token
+        for token in _tokenize_loose(" ".join([current_name or "", current_activity or "", current_description or ""]))
+        if _is_query_word(token) and token not in banned_name_terms
+    }
+    if normalized_ai_tags:
+        normalized_ai_tags = [
+            tag
+            for tag in normalized_ai_tags
+            if _term_supported_by_context(tag, context_terms)
+        ]
 
-    source_terms = _extract_cluster_terms(topic_clusters)
-    source_tags = _extract_source_tags(source_posts, limit=24, banned_terms=banned_name_terms)
-    meta_tags = _extract_meta_tags(current_activity or "", current_description or "", current_screen_name or "", limit=10)
-    name_tags = [token for token in _tokenize_loose(current_name or "") if _is_query_word(token)]
+    source_terms = set()
+    source_tags: list[str] = []
+    meta_tags: list[str] = []
+    name_tags: list[str] = []
+    if use_ai_tags_only and normalized_ai_tags:
+        source_terms.update(normalized_ai_tags)
+        source_tags = list(normalized_ai_tags)
+    else:
+        source_terms = _extract_cluster_terms(topic_clusters)
+        source_tags = _normalize_terms(
+            _extract_source_tags(source_posts, limit=24, banned_terms=banned_name_terms),
+            banned_terms=banned_name_terms,
+            limit=24,
+        )
+        meta_tags = _normalize_terms(
+            _extract_meta_tags(current_activity or "", current_description or "", current_screen_name or "", limit=10),
+            banned_terms=banned_name_terms,
+            limit=10,
+        )
+        name_tags = [token for token in _tokenize_loose(current_name or "") if _is_query_word(token)]
 
     for term in source_tags + meta_tags + name_tags + normalized_ai_tags:
         if _is_query_term(term) and term not in banned_name_terms:
             source_terms.add(term)
 
-    source_terms = {term for term in source_terms if _is_query_term(term)}
+    source_terms = {
+        term
+        for term in source_terms
+        if _is_query_term(term) and _is_specific_term(term, banned_terms=banned_name_terms)
+    }
     if not source_terms:
         return []
 
-    anchor_terms = [term for term in (normalized_ai_tags + source_tags + meta_tags) if _is_query_term(term)]
-    dedup_anchors: list[str] = []
-    for term in anchor_terms:
-        if term not in dedup_anchors:
-            dedup_anchors.append(term)
-    anchor_terms_set = set(dedup_anchors[:12])
+    ranked_anchors = sorted(
+        source_terms,
+        key=lambda value: (_term_specificity(value), len(value)),
+        reverse=True,
+    )
+    anchor_terms_set = set(ranked_anchors[:12])
+    domain_terms = set(ranked_anchors[:18])
 
     queries = _build_competitor_queries(
         source_terms=source_terms,
@@ -157,6 +190,7 @@ def _search_vk_competitors(
         meta_tags=meta_tags,
         ai_tags=normalized_ai_tags,
         current_name=current_name,
+        allow_name_fallback=not use_ai_tags_only,
     )
     if not queries:
         return []
@@ -269,6 +303,7 @@ def _search_vk_competitors(
         metadata_overlap = _match_terms(source_terms, candidate_tokens)
         query_overlap = set(candidate.get("_matched_terms") or set())
         overlap = metadata_overlap | query_overlap
+        domain_overlap = _match_terms(domain_terms, candidate_tokens) if domain_terms else set()
 
         if not overlap:
             continue
@@ -280,6 +315,7 @@ def _search_vk_competitors(
 
         query_signal = float(candidate.get("_query_quality") or 0.0)
         overlap_ratio = len(metadata_overlap) / max(1, len(source_terms))
+        domain_ratio = len(domain_overlap) / max(1, len(domain_terms)) if domain_terms else 0.0
         member_signal = (
             min(1.0, (int(candidate.get("members_count") or 0) / 2_000_000))
             if candidate.get("members_count")
@@ -292,16 +328,19 @@ def _search_vk_competitors(
         }
         activity_overlap = len(source_activity_tokens & candidate_activity_tokens)
 
-        score = 0.14 + overlap_ratio * 0.55 + query_signal * 0.23 + member_signal * 0.08
+        score = 0.14 + overlap_ratio * 0.48 + domain_ratio * 0.2 + query_signal * 0.2 + member_signal * 0.08
         if source_activity_tokens and candidate_activity_tokens:
             if activity_overlap == 0:
                 score *= 0.84
             else:
                 score += min(0.08, activity_overlap * 0.03)
+        if domain_terms and not domain_overlap:
+            score *= 0.72
         score = max(0.05, min(0.9, round(score, 3)))
 
         candidate["_metadata_overlap"] = sorted(metadata_overlap)
         candidate["_overlap_terms"] = sorted(overlap)
+        candidate["_domain_overlap"] = sorted(domain_overlap)
         candidate["_score"] = score
         preliminary.append(candidate)
 
@@ -399,6 +438,9 @@ def _search_vk_competitors(
                     continue
                 if current_screen_name_l and screen_name == current_screen_name_l:
                     continue
+                name_tokens = {token for token in _tokenize_loose(item.name) if _is_query_word(token)}
+                if domain_terms and not _match_terms(domain_terms, name_tokens):
+                    continue
                 validated.append(
                     {
                         "group_id": abs(hash(item.screen_name)) % 1_000_000_000 + 1_000_000_000,
@@ -417,7 +459,7 @@ def _search_vk_competitors(
             if len(validated) >= limit * 2:
                 break
 
-    if not validated:
+    if not validated and not use_ai_tags_only:
         source_name_query = " ".join((current_name or "").split())
         for item in search_public_groups(source_name_query, limit=max(3, limit * 2)):
             screen_name = (item.screen_name or "").strip().lower()
@@ -437,7 +479,7 @@ def _search_vk_competitors(
                     "activity": None,
                     "matched_by": [source_name_query],
                     "shared_topics": cluster_labels[:2],
-                    "why_similar": f"\u041d\u0430\u0439\u0434\u0435\u043d \u0447\u0435\u0440\u0435\u0437 \u043f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0439 VK search \u043f\u043e \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u044e: {source_name_query}.",
+                    "why_similar": f"Найден через публичный VK search по названию: {source_name_query}.",
                     "similarity_score": 0.24,
                 }
             )
@@ -474,6 +516,7 @@ def _build_competitor_queries(
     meta_tags: list[str],
     ai_tags: list[str],
     current_name: str,
+    allow_name_fallback: bool = True,
 ) -> list[str]:
     queries: list[str] = []
 
@@ -492,16 +535,26 @@ def _build_competitor_queries(
         if normalized:
             queries.append(normalized)
 
-    ranked = sorted(source_terms, key=lambda value: (len(value), value), reverse=True)
+    ranked = sorted(
+        [term for term in source_terms if " " not in term],
+        key=lambda value: (_term_specificity(value), len(value)),
+        reverse=True,
+    )
+    pair_added = 0
     for idx in range(min(8, max(0, len(ranked) - 1))):
         left = ranked[idx]
         right = ranked[idx + 1]
+        if left == right:
+            continue
         query = f"{left} {right}"
         if _is_query_term(query):
             queries.append(query)
+            pair_added += 1
+        if pair_added >= 5:
+            break
 
     name_tokens = [token for token in _tokenize_loose(current_name) if _is_query_word(token)]
-    if len(name_tokens) >= 1:
+    if allow_name_fallback and len(name_tokens) >= 1:
         queries.append(" ".join(name_tokens[:2]))
 
     deduped: list[str] = []
@@ -510,13 +563,13 @@ def _build_competitor_queries(
         normalized = " ".join(query.split()).strip().lower()
         if not normalized or normalized in seen:
             continue
-        if not _is_query_term(normalized):
+        if not _is_query_term(normalized) or not _is_specific_term(normalized):
             continue
         seen.add(normalized)
         deduped.append(normalized)
         if len(deduped) >= 22:
             break
-    if not deduped and name_tokens:
+    if not deduped and allow_name_fallback and name_tokens:
         fallback = name_tokens[0]
         if _is_query_term(fallback):
             deduped.append(fallback)
@@ -524,10 +577,67 @@ def _build_competitor_queries(
 
 
 def _normalize_query_for_search(value: str) -> str:
-    tokens = [token for token in _tokenize_loose(value) if _is_query_word(token)]
+    normalized_value = str(value or "").replace("_", " ").replace("-", " ")
+    tokens = [token for token in _tokenize_loose(normalized_value) if _is_query_word(token)]
     if not tokens:
         return ""
     return " ".join(tokens[:3]).strip()
+
+
+def _normalize_terms(
+    values: list[str] | tuple[str, ...],
+    *,
+    banned_terms: set[str] | None = None,
+    limit: int = 16,
+) -> list[str]:
+    banned_terms = banned_terms or set()
+    terms: list[str] = []
+    seen: set[str] = set()
+    for raw in values:
+        normalized = _normalize_query_for_search(str(raw or "").strip().lower())
+        if not normalized:
+            continue
+        if normalized in seen:
+            continue
+        if not _is_query_term(normalized):
+            continue
+        if not _is_specific_term(normalized, banned_terms=banned_terms):
+            continue
+        seen.add(normalized)
+        terms.append(normalized)
+        if len(terms) >= limit:
+            break
+    return terms
+
+
+def _filter_tags_by_group_context(
+    tags: list[str] | tuple[str, ...],
+    *,
+    group_name: str,
+    group_description: str | None,
+    group_activity: str | None,
+    limit: int = 16,
+) -> list[str]:
+    banned_name_terms = _brand_terms(group_name or "")
+    context_terms = {
+        token
+        for token in _tokenize_loose(" ".join([group_name or "", group_activity or "", group_description or ""]))
+        if _is_query_word(token) and token not in banned_name_terms
+    }
+    normalized = _normalize_terms(list(tags or []), banned_terms=banned_name_terms, limit=limit * 2)
+    filtered = [tag for tag in normalized if _term_supported_by_context(tag, context_terms)]
+    return filtered[:limit]
+
+
+def _term_supported_by_context(term: str, context_terms: set[str]) -> bool:
+    words = [token for token in _tokenize_loose(term) if _is_query_word(token)]
+    if not words:
+        return False
+    if not context_terms:
+        return True
+    if any(word in context_terms for word in words):
+        return True
+    return any(any(ch.isdigit() for ch in word) for word in words)
 
 
 def _match_terms(source_terms: set[str], candidate_tokens: set[str]) -> set[str]:
@@ -640,13 +750,18 @@ def _brand_terms(*values: str) -> set[str]:
 
 def _extract_meta_tags(activity: str, description: str, name: str, limit: int = 8) -> list[str]:
     brand = _brand_terms(name)
-    text = " ".join(part for part in [activity, description] if part)
+    text = description or ""
     tokens = [token for token in _tokenize_loose(text) if _is_query_word(token) and token not in brand]
 
     counter: Counter[str] = Counter(tokens)
+    description_tokens = {
+        token
+        for token in _tokenize_loose(description or "")
+        if _is_query_word(token) and token not in brand
+    }
     for token in _tokenize_loose(activity):
-        if _is_query_word(token) and token not in brand:
-            counter[token] += 3
+        if _is_query_word(token) and token not in brand and token in description_tokens:
+            counter[token] += 2
 
     # Useful phrases from description (e.g. "новый альбом", "авто новости").
     seq = [token for token in _tokenize_loose(description or "") if _is_query_word(token) and token not in brand]
@@ -761,7 +876,13 @@ def _is_query_term(text: str) -> bool:
 def _is_query_word(word: str) -> bool:
     value = str(word or "").strip().lower()
     if len(value) < 4:
-        if len(value) < 3 or not (any(ch.isalpha() for ch in value) and any(ch.isdigit() for ch in value)):
+        if len(value) < 2:
+            return False
+        # Allow short technical acronyms (e.g., erp/crm/seo) and mixed alpha-numeric terms.
+        if not (
+            value.isalpha()
+            or (any(ch.isalpha() for ch in value) and any(ch.isdigit() for ch in value))
+        ):
             return False
     if value in _WEAK_QUERY_WORDS:
         return False
@@ -774,6 +895,36 @@ def _is_query_word(word: str) -> bool:
     if _looks_like_noise_slug(value):
         return False
     return any(ch.isalpha() for ch in value)
+
+
+def _is_specific_term(term: str, banned_terms: set[str] | None = None) -> bool:
+    banned_terms = banned_terms or set()
+    tokens = [token for token in _tokenize_loose(term) if _is_query_word(token)]
+    if not tokens:
+        return False
+    if all(token in banned_terms for token in tokens):
+        return False
+    strong_tokens = [token for token in tokens if (len(token) >= 5 or any(ch.isdigit() for ch in token))]
+    return bool(strong_tokens)
+
+
+def _term_specificity(term: str) -> float:
+    tokens = [token for token in _tokenize_loose(term) if _is_query_word(token)]
+    if not tokens:
+        return 0.0
+    score = 0.0
+    for token in tokens:
+        if any(ch.isdigit() for ch in token):
+            score += 1.2
+        elif len(token) >= 8:
+            score += 1.15
+        elif len(token) >= 6:
+            score += 1.0
+        else:
+            score += 0.8
+    if len(tokens) >= 2:
+        score += 0.2
+    return round(score, 3)
 
 
 def _looks_like_noise_slug(word: str) -> bool:
@@ -789,16 +940,16 @@ def _tokenize_loose(text: str) -> list[str]:
     tokens: list[str] = []
     buf: list[str] = []
     for ch in text:
-        if ch.isalnum() or ch in {"_", "-"}:
+        if ch.isalnum():
             buf.append(ch)
         else:
             if buf:
-                token = "".join(buf).strip("-_")
+                token = "".join(buf)
                 if len(token) >= 2:
                     tokens.append(token)
                 buf = []
     if buf:
-        token = "".join(buf).strip("-_")
+        token = "".join(buf)
         if len(token) >= 2:
             tokens.append(token)
     return tokens
@@ -846,23 +997,23 @@ def _is_group_auth_restriction(exc: Exception) -> bool:
 def _build_audience_profile(ai: VKGroupAIInsights, metrics: VKGroupMetricsResponse) -> dict:
     content_preferences = []
     if ai.search_tags:
-        content_preferences.append(f"Best-performing themes: {', '.join(ai.search_tags[:4])}")
+        content_preferences.append(f"Лучше всего заходят темы: {', '.join(ai.search_tags[:4])}")
     if metrics.average_views >= 300:
-        content_preferences.append("Content still gets noticeable reach in public-only mode")
+        content_preferences.append("Контент продолжает получать заметный охват даже в публичном режиме")
     if metrics.average_comments >= 10:
-        content_preferences.append("Posts with direct questions drive stronger comment activity")
+        content_preferences.append("Посты с прямыми вопросами дают более сильную активность в комментариях")
     if not content_preferences:
-        content_preferences.append("Need more data to confidently define preferred content formats")
+        content_preferences.append("Нужно больше данных, чтобы уверенно определить предпочитаемые форматы контента")
 
     engagement_style = []
     if metrics.average_comments >= 10:
-        engagement_style.append("Audience actively discusses and argues in comments")
+        engagement_style.append("Аудитория активно обсуждает и спорит в комментариях")
     if metrics.average_likes >= 50:
-        engagement_style.append("Reactions are stable, especially on news/event content")
+        engagement_style.append("Реакции стабильны, особенно на новостном и событийном контенте")
     if metrics.posts_per_day >= 2:
-        engagement_style.append("Feed consumption is fast; audience is used to high posting rhythm")
+        engagement_style.append("Лента потребляется быстро; аудитория привыкла к плотному ритму публикаций")
     if not engagement_style:
-        engagement_style.append("Engagement is partially visible because public access limits some metrics")
+        engagement_style.append("Вовлеченность видна частично, потому что публичный доступ ограничивает часть метрик")
 
     return {
         "interests": ai.audience_interests,

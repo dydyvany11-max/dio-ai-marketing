@@ -45,6 +45,10 @@ class VKGroupInsights(BaseModel):
     recommendations: list[Recommendation] = Field(default_factory=list)
 
 
+class VKSearchTagsOnly(BaseModel):
+    search_tags: list[str] = Field(default_factory=list)
+
+
 class GigaChatVKClient:
     def __init__(self, settings: GigaChatSettings):
         self._settings = settings
@@ -190,32 +194,97 @@ class GigaChatVKClient:
         schema = VKGroupInsights.model_json_schema()
         compact_payload = self._compact_group_payload(payload)
         full_prompt = (
-            "Ты аналитик сообществ ВКонтакте.\n"
-            "Используй ТОЛЬКО переданные данные.\n"
-            "Верни ТОЛЬКО один JSON-объект, без markdown и комментариев.\n"
-            "Не дублируй входные данные. Не оборачивай ответ в VKGroupInsights или другой внешний ключ.\n"
-            "Верхний уровень JSON должен содержать ровно эти ключи:\n"
-            "audience_interests, audience_age, audience_activity, potential_competitors, search_tags, summary, limitations, recommendations.\n"
-            "Каждый элемент списка должен быть коротким тезисом на естественном языке, а не сырыми токенами.\n"
-            "search_tags: 6-12 коротких тематических тегов/фраз для поиска конкурентов.\n"
+            "Ты аналитик VK-сообществ.\n"
+            "Используй только входные данные ниже и верни один валидный JSON-объект без markdown.\n"
+            "Не дублируй входной payload и не добавляй внешнюю обертку.\n"
+            "Ключи верхнего уровня строго: audience_interests, audience_age, audience_activity, potential_competitors, "
+            "search_tags, summary, limitations, recommendations.\n"
+            "search_tags: 6-12 коротких тематических тегов/фраз для VK-поиска конкурентов.\n"
+            "Важно: в search_tags не включай слишком общие служебные слова; теги должны быть предметными и нишевыми.\n"
+            "Используй только тематические термины ниши из описания группы и постов.\n"
             "recommendations: 2-4 объекта с полями title, action, rationale.\n"
-            "Если данных недостаточно, явно укажи это в limitations.\n"
+            "Все поля и тексты должны быть на русском языке.\n"
+            "Если данных мало, явно зафиксируй ограничения в limitations.\n\n"
             f"Язык ответа: {language}.\n\n"
             f"JSON-схема:\n{json.dumps(schema, ensure_ascii=False)}\n\n"
-            "Пример ответа:\n"
-            "{\"audience_interests\":[\"Советы по обслуживанию авто и дорожные ситуации\"],"
-            "\"audience_age\":[\"25-44 — вероятное ядро аудитории\"],"
-            "\"audience_activity\":[\"Стабильные комментарии под практичными постами\"],"
-            "\"potential_competitors\":[\"Локальные авто-сообщества с ежедневными новостями\"],"
-            "\"search_tags\":[\"авто новости\",\"дорожные ситуации\",\"ремонт авто\",\"сообщество водителей\"],"
-            "\"summary\":\"Ядро интересов — практический авто-контент с регулярным обсуждением.\","
-            "\"limitations\":[\"Публичные данные VK могут не содержать полные метрики вовлеченности.\"],"
-            "\"recommendations\":[{\"title\":\"Серия практичных постов\",\"action\":\"Запустить рубрику по обслуживанию авто\",\"rationale\":\"Тема дает стабильные обсуждения\"}]}\n\n"
             f"Входные данные:\n{json.dumps(compact_payload, ensure_ascii=False)}"
         )
         content = self._chat(full_prompt)
+        try:
+            json_text = self._extract_json(content)
+            return self._validate_group_insights_json(json_text)
+        except Exception:
+            repair_prompt = (
+                "Исправь предыдущий ответ и верни только валидный JSON-объект без markdown.\n"
+                "Строгие ключи верхнего уровня: "
+                "audience_interests, audience_age, audience_activity, potential_competitors, "
+                "search_tags, summary, limitations, recommendations.\n"
+                "Никаких дополнительных оберток и комментариев.\n"
+                "Все значения должны быть на русском языке.\n\n"
+                f"JSON-схема:\n{json.dumps(schema, ensure_ascii=False)}\n\n"
+                f"Исходный некорректный ответ:\n{content}"
+            )
+            repaired = self._chat(repair_prompt)
+            repaired_json = self._extract_json(repaired)
+            return self._validate_group_insights_json(repaired_json)
+
+    def generate_search_tags_from_group(
+        self,
+        *,
+        group: dict[str, Any],
+        language: str = "ru",
+        limit: int = 12,
+    ) -> list[str]:
+        schema = VKSearchTagsOnly.model_json_schema()
+        payload = {
+            "name": group.get("name"),
+            "screen_name": group.get("screen_name"),
+            "activity": group.get("activity"),
+            "description": group.get("description"),
+            "site": group.get("site"),
+        }
+        full_prompt = (
+            "Ты аналитик ниш и конкурентов в VK.\n"
+            "На входе только карточка компании/сообщества.\n"
+            "Сгенерируй search_tags для поиска ПРЯМЫХ конкурентов.\n"
+            "Теги должны отражать нишу, продукт, услугу и предметную область компании.\n"
+            "Верни только JSON без markdown.\n"
+            "Ключ верхнего уровня строго один: search_tags.\n"
+            "search_tags: 6-12 коротких тегов/фраз.\n"
+            "Язык тегов: русский.\n\n"
+            f"Язык ответа: {language}.\n\n"
+            f"JSON-схема:\n{json.dumps(schema, ensure_ascii=False)}\n\n"
+            f"Входные данные:\n{json.dumps(payload, ensure_ascii=False)}"
+        )
+        content = self._chat(full_prompt)
         json_text = self._extract_json(content)
-        return self._validate_group_insights_json(json_text)
+        try:
+            data = VKSearchTagsOnly.model_validate_json(json_text)
+            raw_tags = data.search_tags
+        except Exception:
+            loaded = self._safe_load_json_like(json_text)
+            raw_tags = []
+            if isinstance(loaded, dict):
+                if isinstance(loaded.get("search_tags"), list):
+                    raw_tags = loaded.get("search_tags") or []
+                else:
+                    for value in loaded.values():
+                        if isinstance(value, dict) and isinstance(value.get("search_tags"), list):
+                            raw_tags = value.get("search_tags") or []
+                            break
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for tag in raw_tags:
+            value = " ".join(str(tag or "").split()).strip().lower()
+            if not value or value in seen:
+                continue
+            if len(value.split()) > 5:
+                continue
+            seen.add(value)
+            normalized.append(value)
+            if len(normalized) >= max(1, limit):
+                break
+        return normalized
 
     def _chat(self, prompt: str) -> str:
         payload = {

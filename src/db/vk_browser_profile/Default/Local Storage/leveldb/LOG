@@ -1,3 +1,16 @@
-2026/03/26-13:45:30.673 515c Reusing MANIFEST C:\Users\Evan\Desktop\Work(DIO)\Projects\dio-ai-marketing\src\db\vk_browser_profile\Default\Local Storage\leveldb/MANIFEST-000001
-2026/03/26-13:45:30.679 515c Recovering log #138
-2026/03/26-13:45:30.679 515c Reusing old log C:\Users\Evan\Desktop\Work(DIO)\Projects\dio-ai-marketing\src\db\vk_browser_profile\Default\Local Storage\leveldb/000138.log 
+2026/03/27-13:08:56.824 595c Reusing MANIFEST C:\Users\Evan\Desktop\Work(DIO)\Projects\dio-ai-marketing\src\db\vk_browser_profile\Default\Local Storage\leveldb/MANIFEST-000001
+2026/03/27-13:08:56.829 595c Recovering log #269
+2026/03/27-13:08:56.834 595c Level-0 table #272: started
+2026/03/27-13:08:56.843 595c Level-0 table #272: 509839 bytes OK
+2026/03/27-13:08:56.844 595c Recovering log #271
+2026/03/27-13:08:56.844 595c Reusing old log C:\Users\Evan\Desktop\Work(DIO)\Projects\dio-ai-marketing\src\db\vk_browser_profile\Default\Local Storage\leveldb/000271.log 
+2026/03/27-13:08:56.845 595c Delete type=0 #269
+2026/03/27-13:08:56.846 5864 Compacting 4@0 + 1@1 files
+2026/03/27-13:08:56.865 5864 Generated table #273@0: 54 keys, 697222 bytes
+2026/03/27-13:08:56.865 5864 Compacted 4@0 + 1@1 files => 697222 bytes
+2026/03/27-13:08:56.866 5864 compacted to: files[ 0 1 0 0 0 0 0 ]
+2026/03/27-13:08:56.866 5864 Delete type=2 #264
+2026/03/27-13:08:56.866 5864 Delete type=2 #266
+2026/03/27-13:08:56.866 5864 Delete type=2 #268
+2026/03/27-13:08:56.866 5864 Delete type=2 #270
+2026/03/27-13:08:56.866 5864 Delete type=2 #272
