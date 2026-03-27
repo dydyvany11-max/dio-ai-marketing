@@ -1,6 +1,8 @@
 import json
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from html import unescape
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
@@ -91,62 +93,17 @@ def _fetch_gdelt(query: str, maxrecords: int = 50) -> list[Article]:
     return [a for a in articles if a.url]
 
 
-def _render_page_html(url: str, wait_ms: int = 3000) -> str:
-    if sync_playwright is None:
+def _fetch_page_html(url: str, timeout_sec: int = 12) -> str:
+    try:
+        response = requests.get(
+            url,
+            timeout=timeout_sec,
+            headers={"User-Agent": "dio-ai-marketing/1.0 (+trend-collector)"},
+        )
+        response.raise_for_status()
+        return response.text or ""
+    except Exception:
         return ""
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto(url, wait_until="networkidle", timeout=30000)
-        try:
-            page.wait_for_selector("article", timeout=5000)
-        except Exception:
-            pass
-        page.wait_for_timeout(wait_ms)
-
-        html = page.content()
-        browser.close()
-    return html or ""
-
-
-def _render_fallback_text(url: str, wait_ms: int = 3000) -> str:
-    if sync_playwright is None:
-        return ""
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto(url, wait_until="networkidle", timeout=30000)
-        try:
-            page.wait_for_selector("article", timeout=5000)
-        except Exception:
-            pass
-        page.wait_for_timeout(wait_ms)
-        js = """
-        () => {
-          const bad = (t) => /privacy|cookie|consent|preferences|subscribe|sign in/i.test(t);
-          const pick = () => {
-            const article = document.querySelector('article');
-            if (article) return article.innerText || '';
-            const main = document.querySelector('main');
-            if (main) return main.innerText || '';
-            return document.body ? document.body.innerText : '';
-          };
-          let text = pick();
-          let lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-          lines = lines.filter(l => !bad(l));
-          if (lines.length < 20) {
-            const heads = Array.from(document.querySelectorAll('h1,h2,h3'))
-              .map(h => (h.innerText || '').trim())
-              .filter(t => t && !bad(t));
-            lines = heads;
-          }
-          return lines.join('
-');
-        }
-        """
-        text = page.evaluate(js)
-        browser.close()
-    return text or ""
 
 
 def _extract_readable(url: str, html: str) -> tuple[str, str]:
@@ -165,8 +122,37 @@ def _extract_readable(url: str, html: str) -> tuple[str, str]:
     return title.strip(), text.strip()
 
 
-def _fetch_rss(source: Source, max_items: int = 50) -> list[Article]:
-    feed = feedparser.parse(source.url)
+def _extract_plain_title(html: str) -> str:
+    match = re.search(r"<title[^>]*>(.*?)</title>", html or "", flags=re.IGNORECASE | re.DOTALL)
+    if not match:
+        return ""
+    title = re.sub(r"\s+", " ", unescape(match.group(1))).strip()
+    return title
+
+
+def _extract_plain_text(html: str, max_chars: int = 6000) -> str:
+    text = re.sub(r"(?is)<(script|style).*?>.*?</\1>", " ", html or "")
+    text = re.sub(r"(?s)<[^>]+>", " ", text)
+    text = unescape(text)
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) > max_chars:
+        text = text[:max_chars].rstrip() + "..."
+    return text
+
+
+def _fetch_rss(source: Source, max_items: int = 50, timeout_sec: int = 12) -> list[Article]:
+    try:
+        response = requests.get(
+            source.url,
+            timeout=timeout_sec,
+            headers={"User-Agent": "dio-ai-marketing/1.0 (+rss-collector)"},
+        )
+        response.raise_for_status()
+        payload = response.content
+    except Exception:
+        return []
+
+    feed = feedparser.parse(payload)
     articles: list[Article] = []
     for entry in feed.entries[:max_items]:
         title = entry.get("title") or ""
@@ -187,16 +173,17 @@ def _fetch_rss(source: Source, max_items: int = 50) -> list[Article]:
     return [a for a in articles if a.url]
 
 
-def _extract_links_from_page(source: Source, html: str, max_links: int = 15) -> list[str]:
+def _extract_links_from_page(source: Source, html: str, max_links: int = 8) -> list[str]:
     if not html:
         return []
-    if trafilatura is None:
-        return []
+    links = []
     try:
-        # Use trafilatura to find links in the page
-        links = trafilatura.extract_links(html, url=source.url) or []
+        if trafilatura is not None:
+            links = trafilatura.extract_links(html, url=source.url) or []
     except Exception:
         links = []
+    if not links:
+        links = re.findall(r'href=["\']([^"\']+)["\']', html or "", flags=re.IGNORECASE)
 
     base = urlparse(source.url).netloc
     cleaned = []
@@ -215,9 +202,21 @@ def _extract_links_from_page(source: Source, html: str, max_links: int = 15) -> 
     return uniq[:max_links]
 
 
-def _fetch_html_articles(source: Source) -> list[Article]:
-    html = _render_page_html(source.url)
+def _fetch_html_articles(
+    source: Source,
+    *,
+    max_links_default: int = 6,
+    crawl_links: bool = True,
+    timeout_sec: int = 12,
+) -> list[Article]:
+    html = _fetch_page_html(source.url, timeout_sec=timeout_sec)
+    if not html:
+        return []
     title, content = _extract_readable(source.url, html)
+    if not content:
+        content = _extract_plain_text(html, max_chars=7000)
+    if not title:
+        title = _extract_plain_title(html)
 
     # If this looks like a list page, try multiple links
     meta = {}
@@ -226,17 +225,27 @@ def _fetch_html_articles(source: Source) -> list[Article]:
             meta = json.loads(source.meta_json)
         except Exception:
             meta = {}
-    max_links = int(meta.get("max_links", 12)) if isinstance(meta, dict) else 12
+    max_links = int(meta.get("max_links", max_links_default)) if isinstance(meta, dict) else max_links_default
+    max_links = max(1, min(max_links, 20))
 
-    links = _extract_links_from_page(source, html, max_links=max_links)
+    links = _extract_links_from_page(source, html, max_links=max_links) if crawl_links else []
     articles: list[Article] = []
 
     if links:
         for link in links:
             try:
-                resp = requests.get(link, timeout=20)
+                resp = requests.get(
+                    link,
+                    timeout=timeout_sec,
+                    headers={"User-Agent": "dio-ai-marketing/1.0 (+trend-collector)"},
+                )
+                resp.raise_for_status()
                 page_html = resp.text
                 atitle, acontent = _extract_readable(link, page_html)
+                if not acontent:
+                    acontent = _extract_plain_text(page_html, max_chars=5000)
+                if not atitle:
+                    atitle = _extract_plain_title(page_html)
                 if not acontent:
                     continue
                 if not atitle:
@@ -274,11 +283,90 @@ def _fetch_html_articles(source: Source) -> list[Article]:
     return articles
 
 
+def _fetch_html_articles_playwright(
+    source: Source,
+    *,
+    max_items: int = 30,
+    timeout_sec: int = 12,
+) -> list[Article]:
+    if sync_playwright is None:
+        return []
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            page.goto(source.url, wait_until="domcontentloaded", timeout=timeout_sec * 1000)
+            page.wait_for_timeout(1800)
+            rows = page.evaluate(
+                """
+                (maxItems) => {
+                  const badHref = (href) => /\\/privacy|\\/cookie|\\/consent|\\/login|\\/signin/i.test(href || "");
+                  const clean = (v) => (v || "").replace(/\\s+/g, " ").trim();
+                  const out = [];
+                  const seen = new Set();
+                  const anchors = Array.from(document.querySelectorAll('article a[href], h1 a[href], h2 a[href], h3 a[href], a[href]'));
+                  for (const a of anchors) {
+                    const title = clean(a.textContent || "");
+                    if (!title || title.length < 20) continue;
+                    const hrefRaw = a.getAttribute('href') || "";
+                    let href = "";
+                    try { href = new URL(hrefRaw, location.href).toString(); } catch (e) { continue; }
+                    if (!href || badHref(href)) continue;
+                    if (seen.has(href)) continue;
+                    seen.add(href);
+                    const parent = a.closest('article, li, div');
+                    const context = clean(parent ? parent.textContent || "" : "");
+                    out.push({ title: title.slice(0, 260), url: href, content: context.slice(0, 700) });
+                    if (out.length >= maxItems) break;
+                  }
+                  if (!out.length) {
+                    const titleTag = clean((document.querySelector('title') || {}).textContent || "");
+                    const body = clean((document.querySelector('main') || document.body || {}).textContent || "");
+                    if (titleTag || body) {
+                      out.push({ title: titleTag || location.hostname, url: location.href, content: body.slice(0, 1200) });
+                    }
+                  }
+                  return out;
+                }
+                """,
+                max(5, min(max_items, 60)),
+            )
+            browser.close()
+    except Exception:
+        return []
+
+    articles: list[Article] = []
+    for row in rows or []:
+        url = str((row or {}).get("url") or "").strip()
+        title = str((row or {}).get("title") or "").strip()
+        content = str((row or {}).get("content") or "").strip()
+        if not url or not title:
+            continue
+        articles.append(
+            Article(
+                source_id=source.id,
+                source=source.name,
+                url=url,
+                title=title,
+                content=content or title,
+                published_at=None,
+                fetched_at=_utc_now(),
+            )
+        )
+    return articles
+
+
 def collect_from_sources(
     sources: list[Source],
     newsapi_key: str | None = None,
     newsapi_sources: list[str] | None = None,
     gdelt_query: str | None = None,
+    rss_max_items: int = 40,
+    html_max_links: int = 6,
+    crawl_html_links: bool = True,
+    timeout_sec: int = 12,
+    use_playwright_html: bool = True,
+    playwright_max_items: int = 30,
 ) -> list[Article]:
     articles: list[Article] = []
 
@@ -297,12 +385,26 @@ def collect_from_sources(
     for src in sources:
         if src.type == "html":
             try:
-                articles.extend(_fetch_html_articles(src))
+                html_articles: list[Article] = []
+                if use_playwright_html:
+                    html_articles = _fetch_html_articles_playwright(
+                        src,
+                        max_items=playwright_max_items,
+                        timeout_sec=timeout_sec,
+                    )
+                if not html_articles:
+                    html_articles = _fetch_html_articles(
+                        src,
+                        max_links_default=html_max_links,
+                        crawl_links=crawl_html_links,
+                        timeout_sec=timeout_sec,
+                    )
+                articles.extend(html_articles)
             except Exception:
                 continue
         elif src.type == "rss":
             try:
-                articles.extend(_fetch_rss(src))
+                articles.extend(_fetch_rss(src, max_items=rss_max_items, timeout_sec=timeout_sec))
             except Exception:
                 continue
 
@@ -312,12 +414,20 @@ def collect_from_sources(
 def parse_sources(rows: list[dict]) -> list[Source]:
     sources: list[Source] = []
     for row in rows:
+        raw_type = str(row.get("type") or "").strip().lower()
+        url = str(row.get("url") or "").strip()
+        if raw_type in {"rss", "xml", "atom"}:
+            source_type = "rss"
+        elif raw_type in {"html", "news", "site", "website"}:
+            source_type = "html"
+        else:
+            source_type = "rss" if ("rss" in url.lower() or url.lower().endswith(".xml")) else "html"
         sources.append(
             Source(
                 id=int(row["id"]),
                 name=row["name"],
-                url=row["url"],
-                type=row["type"],
+                url=url,
+                type=source_type,
                 meta_json=row.get("meta_json"),
             )
         )

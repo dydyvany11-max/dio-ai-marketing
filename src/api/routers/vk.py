@@ -270,7 +270,14 @@ def vk_generate_post(
     if not is_gigachat_configured():
         raise HTTPException(status_code=400, detail="GigaChat is not configured")
 
-    access_tokens = _resolve_access_tokens()
+    # For publishing, prioritize community token, but keep user-token fallback
+    # for media upload methods that are often unavailable for group auth.
+    group_token = _load_group_token()
+    resolved_tokens = _resolve_access_tokens()
+    if group_token:
+        access_tokens = [group_token] + [token for token in resolved_tokens if token != group_token]
+    else:
+        access_tokens = resolved_tokens
     access_token = access_tokens[0] if access_tokens else None
     if payload.publish and not access_tokens:
         raise HTTPException(status_code=401, detail="VK access_token is required to publish")
@@ -364,6 +371,8 @@ def vk_generate_post(
         result = None
         last_error: Exception | None = None
         media_error: Exception | None = None
+        media_attached: bool | None = None
+        publish_note: str | None = None
         try:
             if generated.content_type == "image":
                 image_prompt = (generated.image_prompt or "").strip() or text or payload.prompt
@@ -394,6 +403,7 @@ def vk_generate_post(
                             image_bytes=image_bytes,
                             image_mime_type=image_mime_type,
                         )
+                        media_attached = True
                     elif generated.content_type == "video":
                         result = publisher.publish_with_generated_video(
                             access_token=token,
@@ -403,6 +413,7 @@ def vk_generate_post(
                             video_mime_type=video_mime_type,
                             video_title=(payload.theme or "Generated video").strip()[:80] or "Generated video",
                         )
+                        media_attached = True
                     else:
                         result = publisher.publish(
                             access_token=token,
@@ -445,6 +456,8 @@ def vk_generate_post(
                             publish_date=None,
                         ),
                     )
+                    media_attached = False
+                    publish_note = "VK media upload is unavailable for current token; published text-only fallback."
 
             if result is None and last_error is not None:
                 if isinstance(last_error, VKAuthorizationError):
@@ -473,6 +486,8 @@ def vk_generate_post(
             published=True,
             post_id=result.post_id,
             owner_id=result.owner_id,
+            media_attached=media_attached,
+            publish_note=publish_note,
             char_count=char_count,
             word_count=word_count,
             token_estimate=token_estimate,
@@ -497,6 +512,8 @@ def vk_generate_post(
         published=False,
         post_id=None,
         owner_id=None,
+        media_attached=None,
+        publish_note=None,
         char_count=char_count,
         word_count=word_count,
         token_estimate=token_estimate,

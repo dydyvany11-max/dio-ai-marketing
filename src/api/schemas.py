@@ -597,6 +597,16 @@ class VKAIPostResponse(BaseModel):
 
     owner_id: int | None = Field(default=None, description="VK owner ID if published")
 
+    media_attached: bool | None = Field(
+        default=None,
+        description="Was generated media actually attached to published post (for image/video)",
+    )
+
+    publish_note: str | None = Field(
+        default=None,
+        description="Additional publish details/warnings",
+    )
+
     char_count: int = Field(description="Characters count")
 
     word_count: int = Field(description="Words count")
@@ -852,3 +862,90 @@ class TrendTopicItem(BaseModel):
 class TrendTopicListResponse(BaseModel):
 
     items: list[TrendTopicItem]
+
+
+class TrendMentionAnalyzeRequest(BaseModel):
+
+    company: str = Field(description="Company/brand name to search mentions for")
+
+    aliases: list[str] = Field(
+        default_factory=list,
+        description="Optional aliases/variants to include in mention search",
+    )
+
+    limit: int = Field(default=50, ge=1, le=500, description="Max mention items in response")
+
+    article_limit: int = Field(
+        default=1000,
+        ge=50,
+        le=5000,
+        description="How many recent articles to scan",
+    )
+
+
+class TrendMentionItem(BaseModel):
+
+    source: str = Field(description="Source name")
+
+    url: str = Field(description="Article URL")
+
+    title: str | None = Field(default=None, description="Article title")
+
+    published_at: str | None = Field(default=None, description="Article published datetime")
+
+    matched_terms: list[str] = Field(default_factory=list, description="Matched company terms")
+
+    mentions_in_article: int = Field(description="Total matched mentions in this article")
+
+    snippet: str = Field(description="Context snippet around mention")
+
+
+class TrendSourceMentionStat(BaseModel):
+
+    source: str = Field(description="Source name")
+
+    count: int = Field(description="Matched articles count from this source")
+
+
+class TrendMentionAnalyzeResponse(BaseModel):
+
+    company: str = Field(description="Input company name")
+
+    query_terms: list[str] = Field(description="Effective terms used for mention search")
+
+    scanned_articles: int = Field(description="How many articles were scanned")
+
+    matched_articles: int = Field(description="How many articles matched at least one term")
+
+    total_mentions: int = Field(description="Total mention hits across matched articles")
+
+    top_sources: list[TrendSourceMentionStat] = Field(
+        default_factory=list,
+        description="Top sources by matched articles",
+    )
+
+    items: list[TrendMentionItem] = Field(default_factory=list, description="Mention hits")
+
+
+class TrendAIAnalyzeRequest(BaseModel):
+
+    company: str | None = Field(default=None, description="Optional company name for focused mention analysis")
+
+    article_limit: int = Field(default=400, ge=50, le=5000, description="How many recent articles to use")
+
+    language: str = Field(default="ru", description="Output language")
+
+
+class TrendAIAnalyzeResponse(BaseModel):
+
+    summary: str = Field(default="", description="Overall trend summary")
+
+    key_trends: list[str] = Field(default_factory=list, description="Main trend lines")
+
+    infopovody: list[str] = Field(default_factory=list, description="Current news hooks")
+
+    potential_risks: list[str] = Field(default_factory=list, description="Potential reputational/content risks")
+
+    company_mentions: list[str] = Field(default_factory=list, description="Company mention insights")
+
+    limitations: list[str] = Field(default_factory=list, description="Analysis limitations")

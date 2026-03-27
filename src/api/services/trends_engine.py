@@ -39,9 +39,10 @@ _TRANSLATE_CACHE: dict[str, str] = {}
 
 MAX_TOKENS_PER_DOC = int(os.getenv("TRENDS_MAX_TOKENS_PER_DOC", "400"))
 MAX_EN_TOKENS_PER_DOC = int(os.getenv("TRENDS_MAX_EN_TOKENS_PER_DOC", "50"))
-TRANSLATE_EN_TO_RU = os.getenv("TRENDS_TRANSLATE_EN", "true").strip().lower() in {"1", "true", "yes", "on"}
+TRANSLATE_EN_TO_RU = os.getenv("TRENDS_TRANSLATE_EN", "false").strip().lower() in {"1", "true", "yes", "on"}
 
 _CYRILLIC_RE = re.compile(r"[а-яё]+", re.IGNORECASE)
+_ENGLISH_RE = re.compile(r"[a-z]+", re.IGNORECASE)
 
 
 def get_stopwords() -> set[str]:
@@ -91,10 +92,13 @@ def _tokenize(text: str) -> list[str]:
     else:
         ru_tokens = _CYRILLIC_RE.findall(text)
 
-    en_tokens = re.findall(r"[a-z]{3,}", text)
-    if MAX_EN_TOKENS_PER_DOC > 0 and len(en_tokens) > MAX_EN_TOKENS_PER_DOC:
-        en_tokens = en_tokens[:MAX_EN_TOKENS_PER_DOC]
-    en_tokens = _translate_to_ru(en_tokens)
+    en_tokens_raw = re.findall(r"[a-z]{3,}", text)
+    if MAX_EN_TOKENS_PER_DOC > 0 and len(en_tokens_raw) > MAX_EN_TOKENS_PER_DOC:
+        en_tokens_raw = en_tokens_raw[:MAX_EN_TOKENS_PER_DOC]
+    if TRANSLATE_EN_TO_RU:
+        en_tokens = _translate_to_ru(en_tokens_raw)
+    else:
+        en_tokens = en_tokens_raw
 
     tokens = ru_tokens + en_tokens
     if MAX_TOKENS_PER_DOC > 0 and len(tokens) > MAX_TOKENS_PER_DOC:
@@ -104,7 +108,7 @@ def _tokenize(text: str) -> list[str]:
     for t in tokens:
         if len(t) < 3:
             continue
-        if not _CYRILLIC_RE.fullmatch(t):
+        if not (_CYRILLIC_RE.fullmatch(t) or _ENGLISH_RE.fullmatch(t)):
             continue
         if t in stop:
             continue

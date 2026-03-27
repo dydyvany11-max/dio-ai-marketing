@@ -15,19 +15,13 @@ from src.api.config import GigaChatSettings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-class AIClusterLabel(BaseModel):
-    label: str
-    description: str | None = None
-
-
-class AIClusterResult(BaseModel):
-    index: int
-    label: str
-    description: str | None = None
-
-
-class AIClusterResponse(BaseModel):
-    clusters: list[AIClusterResult]
+class AITrendLandscapeResponse(BaseModel):
+    summary: str
+    key_trends: list[str] = Field(default_factory=list)
+    infopovody: list[str] = Field(default_factory=list)
+    potential_risks: list[str] = Field(default_factory=list)
+    company_mentions: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
 
 
 class GigaChatTrendsLabeler:
@@ -36,48 +30,63 @@ class GigaChatTrendsLabeler:
         self._access_token: str | None = None
         self._token_expires_at: float = 0.0
 
-    def label_clusters(self, topics: list[dict]) -> list[dict]:
-        if not topics:
-            return topics
-        prompt = self._build_prompt(topics)
-        content = self._chat(prompt)
-        json_text = self._extract_json(content)
-        parsed = AIClusterResponse.model_validate_json(json_text)
-        by_index = {item.index: item for item in parsed.clusters}
-        labeled = []
-        for idx, topic in enumerate(topics):
-            item = by_index.get(idx)
-            if item:
-                topic = dict(topic)
-                topic["label"] = item.label
-                if item.description:
-                    topic["description"] = item.description
-            labeled.append(topic)
-        return labeled
+    def analyze_landscape(
+        self,
+        *,
+        articles: list[dict[str, Any]],
+        trends: list[dict[str, Any]] | None = None,
+        company: str | None = None,
+        language: str = "ru",
+    ) -> dict[str, Any]:
+        if not articles:
+            return {
+                "summary": "",
+                "key_trends": [],
+                "infopovody": [],
+                "potential_risks": [],
+                "company_mentions": [],
+                "limitations": ["Нет данных: список публикаций пуст."],
+            }
 
-    def _build_prompt(self, topics: list[dict]) -> str:
-        schema = AIClusterResponse.model_json_schema()
-        payload = []
-        for idx, topic in enumerate(topics):
-            payload.append(
+        compact_articles = []
+        for item in articles[:30]:
+            compact_articles.append(
                 {
-                    "index": idx,
-                    "size": topic.get("size"),
-                    "terms": topic.get("terms", [])[:8],
-                    "sample_titles": topic.get("sample_titles", [])[:3],
+                    "source": item.get("source"),
+                    "title": (item.get("title") or "")[:180],
+                    "published_at": item.get("published_at"),
                 }
             )
-        return (
-            "?? ???????? ????????.\n"
-            "??? ???????? ???????? ????? (????????? ????????).\n"
-            "???????:\n"
-            "1. ????? ?????? JSON ??? markdown.\n"
-            "2. ???? ?? ???????.\n"
-            "3. ???????? 2-6 ????.\n"
-            "4. ?? ????????? ?????.\n\n"
-            f"JSON schema:\n{json.dumps(schema, ensure_ascii=False)}\n\n"
-            f"????:\n{json.dumps(payload, ensure_ascii=False)}"
+        compact_trends = []
+        for item in (trends or [])[:15]:
+            compact_trends.append(
+                {
+                    "term": item.get("term"),
+                    "score": round(float(item.get("score") or 0.0), 3),
+                    "growth": round(float(item.get("growth") or 0.0), 3),
+                }
+            )
+
+        schema = AITrendLandscapeResponse.model_json_schema()
+        prompt = (
+            "Ты аналитик медиатрендов.\n"
+            "Задача: кратко выделить тренды и инфоповоды по списку публикаций.\n"
+            "Верни ТОЛЬКО валидный JSON без markdown и лишнего текста.\n"
+            "Не придумывай факты, которых нет во входных данных.\n"
+            f"Язык ответа: {language}.\n"
         )
+        if company:
+            prompt += f"Отдельно оцени упоминания компании: {company}.\n"
+        prompt += (
+            f"\nJSON schema:\n{json.dumps(schema, ensure_ascii=False)}\n\n"
+            f"Тренд-термы:\n{json.dumps(compact_trends, ensure_ascii=False)}\n\n"
+            f"Публикации:\n{json.dumps(compact_articles, ensure_ascii=False)}"
+        )
+
+        content = self._chat(prompt)
+        json_text = self._extract_json(content)
+        parsed = AITrendLandscapeResponse.model_validate_json(json_text)
+        return parsed.model_dump()
 
     def _chat(self, prompt: str) -> str:
         token = self._get_access_token()
@@ -100,7 +109,21 @@ class GigaChatTrendsLabeler:
         )
         response.raise_for_status()
         data = response.json()
-        return data["choices"][0]["message"]["content"]
+        message = data.get("choices", [{}])[0].get("message", {})
+        content = message.get("content")
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts: list[str] = []
+            for item in content:
+                if isinstance(item, str):
+                    parts.append(item)
+                elif isinstance(item, dict):
+                    text = item.get("text") or item.get("content")
+                    if isinstance(text, str):
+                        parts.append(text)
+            return "\n".join(part for part in parts if part).strip()
+        return str(content or "")
 
     def _get_access_token(self) -> str:
         now = time.time()
