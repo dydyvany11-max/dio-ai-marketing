@@ -7,6 +7,7 @@ from src.api.services.trends_engine import get_stopwords
 
 STOPWORDS = {word.lower() for word in get_stopwords()}
 _EXTRA_STOPWORDS = {
+    # Generic UI / crawl noise
     "vk",
     "club",
     "public",
@@ -15,7 +16,6 @@ _EXTRA_STOPWORDS = {
     "post",
     "posts",
     "wall",
-    "official",
     "page",
     "today",
     "yesterday",
@@ -23,29 +23,28 @@ _EXTRA_STOPWORDS = {
     "that",
     "with",
     "from",
-    "online",
-    "info",
-    "company",
-    "companies",
-    "official",
-    "partner",
-    "service",
-    "services",
-    "expert",
-    "experts",
-    "document",
-    "documents",
-    "version",
-    "versions",
-    "need",
-    "required",
-    "must",
+    "comment",
+    "comments",
+    "leave",
+    "reply",
+    "replies",
+    "view",
+    "views",
+    "oldest",
+    "unavailable",
+    "because",
+    "slide",
+    "next",
+    "previous",
+    "swipe",
+    # Russian generic / weak words
     "онлайн",
     "инфо",
     "компания",
     "компании",
     "официальный",
     "партнер",
+    "партнёр",
     "услуга",
     "услуги",
     "эксперт",
@@ -69,20 +68,36 @@ _EXTRA_STOPWORDS = {
     "предыдущий",
     "листайте",
     "свайп",
-    "comment",
-    "comments",
-    "leave",
-    "reply",
-    "replies",
-    "view",
-    "views",
-    "oldest",
-    "unavailable",
-    "because",
-    "slide",
-    "next",
-    "previous",
-    "swipe",
+    # Frequent social slugs/noise
+    "ffmvideos",
+    "ffmnews",
+}
+_ALL_STOPWORDS = STOPWORDS | _EXTRA_STOPWORDS
+_MONTH_WORDS = {
+    "января",
+    "февраля",
+    "марта",
+    "апреля",
+    "мая",
+    "июня",
+    "июля",
+    "августа",
+    "сентября",
+    "октября",
+    "ноября",
+    "декабря",
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
 }
 
 
@@ -112,11 +127,7 @@ def build_local_vk_insights_with_context(
             cleaned_posts.append({**post, "text": text})
 
     banned_terms = _brand_terms(group_name) | _brand_terms(screen_name)
-    post_tags = _extract_tags(
-        cleaned_posts,
-        banned_terms=banned_terms,
-        limit=14,
-    )
+    post_tags = _extract_tags(cleaned_posts, banned_terms=banned_terms, limit=16)
     context_tags = _extract_context_tags(
         description=group_description or "",
         activity=group_activity or "",
@@ -165,14 +176,14 @@ def _normalize_text(text: str) -> str:
     if not value:
         return ""
     value = re.sub(r"https?://\S+", " ", value, flags=re.IGNORECASE)
-    value = re.sub(r"(?:^|\s)[@#][A-Za-zА-Яа-яЁё0-9_\-.]+", " ", value)
+    value = re.sub(r"(?:^|\s)[@#][A-Za-zА-Яа-яЁё0-9_.-]+", " ", value)
     value = re.sub(r"\s+", " ", value).strip()
     return value[:5000]
 
 
 def _tokenize(text: str) -> list[str]:
     output: list[str] = []
-    for token in re.findall(r"[A-Za-z?-??-???0-9]+", text or ""):
+    for token in re.findall(r"[A-Za-zА-Яа-яЁё0-9]+", text or ""):
         value = token.lower()
         if len(value) >= 3:
             output.append(value)
@@ -192,11 +203,7 @@ def _extract_tags(posts: list[dict], *, banned_terms: set[str], limit: int) -> l
     bigram_tf: Counter[str] = Counter()
 
     for post in posts:
-        tokens = [
-            token
-            for token in _tokenize(str(post.get("text") or ""))
-            if _is_semantic_token(token, banned_terms)
-        ]
+        tokens = [token for token in _tokenize(str(post.get("text") or "")) if _is_semantic_token(token, banned_terms)]
         if not tokens:
             continue
 
@@ -205,7 +212,7 @@ def _extract_tags(posts: list[dict], *, banned_terms: set[str], limit: int) -> l
 
         for idx in range(len(tokens) - 1):
             bigram = f"{tokens[idx]} {tokens[idx + 1]}"
-            if _is_semantic_phrase(bigram):
+            if _is_semantic_phrase(bigram, banned_terms):
                 bigram_tf[bigram] += 1
 
     total_docs = max(1, len(posts))
@@ -222,7 +229,7 @@ def _extract_tags(posts: list[dict], *, banned_terms: set[str], limit: int) -> l
     for phrase, tf in bigram_tf.items():
         if tf < min_df:
             continue
-        score = tf * 1.35
+        score = tf * 1.3
         scored.append((phrase, score))
 
     scored.sort(key=lambda item: (item[1], len(item[0])), reverse=True)
@@ -250,7 +257,7 @@ def _extract_context_tags(description: str, activity: str, *, banned_terms: set[
             counter[token] += 2
     for idx in range(len(tokens) - 1):
         phrase = f"{tokens[idx]} {tokens[idx + 1]}"
-        if _is_semantic_phrase(phrase):
+        if _is_semantic_phrase(phrase, banned_terms):
             counter[phrase] += 2
     tags: list[str] = []
     for term, _ in counter.most_common(limit * 3):
@@ -279,123 +286,86 @@ def _merge_tag_lists(primary: list[str], secondary: list[str], *, limit: int) ->
 
 def _is_semantic_token(token: str, banned_terms: set[str]) -> bool:
     if len(token) < 3:
-        if not (len(token) >= 2 and any(ch.isdigit() for ch in token) and any(ch.isalpha() for ch in token)):
-            return False
-    if len(token) < 2:
         return False
     if token in banned_terms:
         return False
-    if token in STOPWORDS or token in _EXTRA_STOPWORDS:
+    if token in _ALL_STOPWORDS or token in _MONTH_WORDS:
         return False
     if token.isdigit():
         return False
-    if any(ch.isdigit() for ch in token) and len(token) < 4 and not any(ch.isalpha() for ch in token):
-        return False
-    if not any(ch.isalpha() for ch in token):
-        return False
-    if token.endswith(("ing", "ed", "tion", "ions", "ться", "овать", "ение")):
+    if token.startswith("http"):
         return False
     return True
 
 
-def _is_semantic_phrase(phrase: str) -> bool:
-    parts = phrase.split()
-    if len(parts) != 2:
+def _is_semantic_phrase(phrase: str, banned_terms: set[str]) -> bool:
+    words = phrase.split()
+    if len(words) != 2:
         return False
-    return all(len(part) >= 3 and part not in STOPWORDS and part not in _EXTRA_STOPWORDS for part in parts)
+    return all(_is_semantic_token(word, banned_terms) for word in words)
 
 
 def _build_interest_bullets(tags: list[str]) -> list[str]:
     if not tags:
-        return ["Явные тематические кластеры не выделились: нужно больше чистых текстов постов."]
-
-    bullets: list[str] = []
-    first = ", ".join(tags[:4])
-    bullets.append(f"Главные интересы аудитории: {first}")
-    if len(tags) > 4:
-        second = ", ".join(tags[4:8])
-        bullets.append(f"Дополнительные сигналы интереса: {second}")
-    return bullets[:4]
+        return ["Явные тематические сигналы не выделились — нужно больше постов."]
+    head = ", ".join(tags[:4])
+    tail = ", ".join(tags[4:8])
+    bullets = [f"Главные интересы аудитории: {head}"]
+    if tail:
+        bullets.append(f"Дополнительные сигналы интереса: {tail}")
+    return bullets
 
 
 def _build_age_bullets(tags: list[str], metrics: dict) -> list[str]:
-    text = " ".join(tags)
-    if any(word in text for word in ["бизнес", "финансы", "карьера", "b2b", "сделка", "инвестиции"]):
-        return [
-            "25-44 - вероятный основной сегмент, ориентированный на прикладной контент",
-            "18-24 - дополнительный сегмент для быстрых форматов и трендов",
-        ]
-    if any(word in text for word in ["игра", "кибер", "музыка", "мем", "стрим", "кино"]):
-        return ["18-34 - активный сегмент, регулярно потребляющий развлекательный контент"]
-    if (metrics.get("average_comments") or 0) >= 10:
-        return [
-            "18-24 - заметная доля активных комментаторов",
-            "25-34 - стабильный вовлеченный сегмент",
-        ]
-    return ["18-34 - базовый активный сегмент пользователей соцсетей"]
+    comments = int(metrics.get("average_comments") or 0)
+    likes = int(metrics.get("average_likes") or 0)
+    if comments >= 20 or likes >= 200:
+        return ["18-24 — наиболее активная возрастная группа", "25-34 — значительная аудитория"]
+    return ["18-34 — базовый активный сегмент пользователей соцсетей"]
 
 
 def _build_activity_bullets(tags: list[str], metrics: dict) -> list[str]:
     comments = int(metrics.get("average_comments") or 0)
-    likes = int(metrics.get("average_likes") or 0)
     posts_per_day = float(metrics.get("posts_per_day") or 0)
-
     bullets: list[str] = []
-    if comments >= 8:
+    if comments >= 10:
         bullets.append("Регулярное участие в обсуждениях")
     elif comments > 0:
-        bullets.append("Есть вовлеченность, но комментариев немного")
+        bullets.append("Комментариев немного, аудитория в основном реактивная")
     else:
-        bullets.append("Комментариев мало, аудитория в основном реактивная")
+        bullets.append("Низкая активность комментариев")
 
-    if likes >= 50:
-        bullets.append("Высокая вовлеченность в реакции")
-    elif likes >= 15:
-        bullets.append("Средняя вовлеченность в реакции")
-    else:
-        bullets.append("Низкая реактивность, нужны более сильные контент-хуки")
-
-    if posts_per_day >= 2:
-        bullets.append("Высокий ритм публикаций, аудитория привыкла к частым обновлениям")
-    elif posts_per_day > 0:
-        bullets.append("Умеренный ритм публикаций")
+    if posts_per_day >= 1:
+        bullets.append("Умеренный или высокий ритм публикаций")
     else:
         bullets.append("Ритм публикаций не определился из-за ограничений данных")
-
     return bullets[:3]
 
 
 def _build_competitor_hints(tags: list[str], group_name: str) -> list[str]:
     if not tags:
-        return [f"Искать похожие VK-сообщества по теме '{group_name}' и близким ключевым словам."]
-
-    shortlist = tags[:6]
-    hints = ["Искать конкурентов по тематическим тегам: " + ", ".join(shortlist[:3])]
-    if len(shortlist) >= 4:
-        hints.append("Дополнительные теги для поиска: " + ", ".join(shortlist[3:6]))
-    return hints[:3]
+        return ["Искать конкурентов по тематике контента и близким ключевым словам группы"]
+    hints = [f"Искать конкурентов по тематическим тегам: {', '.join(tags[:4])}"]
+    if len(tags) > 4:
+        hints.append(f"Дополнительные теги для поиска: {', '.join(tags[4:8])}")
+    return hints
 
 
 def _build_summary(group_name: str, total_posts: int, interests: list[str], activity: list[str]) -> str:
-    top_interest = interests[0] if interests else "тематические сигналы не определились"
-    top_activity = activity[0] if activity else "активность не определилась"
-    return (
-        f"{group_name}: проанализировано {total_posts} постов. "
-        f"Ключевой интерес: {top_interest}. "
-        f"Активность аудитории: {top_activity}."
-    )
+    interest = interests[0] if interests else "Тематические сигналы не выделены"
+    activity_signal = activity[0] if activity else "Активность аудитории не определена"
+    return f"{group_name}: проанализировано {total_posts} постов. Ключевой интерес: {interest}. Активность аудитории: {activity_signal}."
 
 
-def _dedupe(values: list[str]) -> list[str]:
+def _dedupe(items: list[str]) -> list[str]:
     output: list[str] = []
     seen: set[str] = set()
-    for value in values:
-        normalized = " ".join(str(value or "").split()).strip()
-        if not normalized:
+    for item in items:
+        value = (item or "").strip()
+        if not value:
             continue
-        key = normalized.lower()
-        if key in seen:
+        if value in seen:
             continue
-        seen.add(key)
-        output.append(normalized)
+        seen.add(value)
+        output.append(value)
     return output

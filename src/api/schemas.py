@@ -480,7 +480,7 @@ class VKAudienceReportResponse(BaseModel):
 
 class VKPublishRequest(BaseModel):
 
-    message: str = Field(default="", description="?????????? ??????????")
+    message: str = Field(default="", description="Текст публикации")
 
 
 class VKPublishResponse(BaseModel):
@@ -624,6 +624,16 @@ class VKAIPostResponse(BaseModel):
     image_prompt: str | None = Field(default=None, description="Image generation prompt if content_type=image")
 
     video_script: str | None = Field(default=None, description="Video script if content_type=video")
+
+    generated_image_base64: str | None = Field(
+        default=None,
+        description="Generated image as base64 string (for preview/download in UI)",
+    )
+
+    generated_image_mime_type: str | None = Field(
+        default=None,
+        description="MIME type of generated image",
+    )
 
     knowledge_base_id: str | None = Field(default=None, description="Used knowledge base id")
 

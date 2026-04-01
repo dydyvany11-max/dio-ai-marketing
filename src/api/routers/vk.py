@@ -1,4 +1,5 @@
-﻿import json
+import base64
+import json
 import os
 import re
 from collections import Counter
@@ -371,6 +372,25 @@ def vk_generate_post(
         raise HTTPException(status_code=502, detail=f"GigaChat error: {exc}") from exc
 
     text = generated.text
+    generated_image_base64: str | None = None
+    generated_image_mime_type: str | None = None
+    image_bytes: bytes | None = None
+    image_mime_type: str | None = None
+
+    if generated.content_type == "image":
+        try:
+            image_prompt = (generated.image_prompt or "").strip() or text or payload.prompt
+            image_bytes, image_mime_type, _ = client.generate_image(
+                prompt=image_prompt,
+                language=payload.language,
+                theme=payload.theme,
+                tone=payload.tone,
+                knowledge_base=kb_excerpt,
+            )
+            generated_image_base64 = base64.b64encode(image_bytes).decode("ascii")
+            generated_image_mime_type = image_mime_type
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Image generation failed: {exc}") from exc
 
     if payload.publish:
         result = None
@@ -379,16 +399,7 @@ def vk_generate_post(
         media_attached: bool | None = None
         publish_note: str | None = None
         try:
-            if generated.content_type == "image":
-                image_prompt = (generated.image_prompt or "").strip() or text or payload.prompt
-                image_bytes, image_mime_type, _ = client.generate_image(
-                    prompt=image_prompt,
-                    language=payload.language,
-                    theme=payload.theme,
-                    tone=payload.tone,
-                    knowledge_base=kb_excerpt,
-                )
-            elif generated.content_type == "video":
+            if generated.content_type == "video":
                 video_prompt = (generated.video_script or "").strip() or text or payload.prompt
                 video_bytes, video_mime_type, _ = client.generate_video(
                     prompt=video_prompt,
@@ -401,6 +412,8 @@ def vk_generate_post(
             for token in access_tokens:
                 try:
                     if generated.content_type == "image":
+                        if image_bytes is None or image_mime_type is None:
+                            raise HTTPException(status_code=502, detail="Generated image is missing")
                         result = publisher.publish_with_generated_image(
                             access_token=token,
                             group_id=group_id or 0,
@@ -503,6 +516,8 @@ def vk_generate_post(
             story_frames=generated.story_frames,
             image_prompt=generated.image_prompt,
             video_script=generated.video_script,
+            generated_image_base64=generated_image_base64,
+            generated_image_mime_type=generated_image_mime_type,
             knowledge_base_id=kb_id,
             knowledge_base_name=kb_name,
             knowledge_chunks_used=len(kb_snippets) if kb_snippets else None,
@@ -529,6 +544,8 @@ def vk_generate_post(
         story_frames=generated.story_frames,
         image_prompt=generated.image_prompt,
         video_script=generated.video_script,
+        generated_image_base64=generated_image_base64,
+        generated_image_mime_type=generated_image_mime_type,
         knowledge_base_id=kb_id,
         knowledge_base_name=kb_name,
         knowledge_chunks_used=len(kb_snippets) if kb_snippets else None,

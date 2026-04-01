@@ -1,5 +1,8 @@
-﻿import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./styles.css";
+
+const BRAND_LOGO_URL =
+  "http://80.93.62.177:8000/media/images/Logo_bez_fona_bez_teksta.width-80.height-80.png";
 
 async function postJson(url, payload) {
   const response = await fetch(url, {
@@ -25,8 +28,7 @@ async function postJson(url, payload) {
 }
 
 function formatNumber(value) {
-  const num = Number(value || 0);
-  return new Intl.NumberFormat("ru-RU").format(num);
+  return new Intl.NumberFormat("ru-RU").format(Number(value || 0));
 }
 
 function formatDate(ts) {
@@ -43,6 +45,16 @@ function formatDate(ts) {
   });
 }
 
+function prettyContentType(contentType) {
+  const map = {
+    text: "Текст",
+    story: "Сторис",
+    image: "Текст + изображение",
+    video: "Видео",
+  };
+  return map[contentType] || contentType;
+}
+
 function MetricCard({ label, value }) {
   return (
     <article className="metric-card">
@@ -52,8 +64,59 @@ function MetricCard({ label, value }) {
   );
 }
 
+function FancySelect({ value, onChange, options }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  const selected = options.find((item) => item.value === value) || options[0];
+
+  useEffect(() => {
+    function handleOutsideClick(event) {
+      if (!wrapRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  return (
+    <div className={`fancy-select ${open ? "open" : ""}`} ref={wrapRef}>
+      <button
+        type="button"
+        className="fancy-select-trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <span>{selected?.label}</span>
+        <span className="fancy-select-caret" />
+      </button>
+      {open ? (
+        <div className="fancy-select-menu" role="listbox">
+          {options.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              className={`fancy-select-option ${item.value === value ? "active" : ""}`}
+              onClick={() => {
+                onChange(item.value);
+                setOpen(false);
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function AnalyzeResultView({ data }) {
-  if (!data) return null;
+  if (!data) {
+    return <div className="placeholder-panel">Запусти анализ группы, и результат появится здесь.</div>;
+  }
+
   const metrics = data.metrics || {};
   const ai = data.ai || {};
   const status = data.ai_status || {};
@@ -189,8 +252,15 @@ function AnalyzeResultView({ data }) {
 
 function GeneratedResultView({ data, editedText, onEditText }) {
   const [copyStatus, setCopyStatus] = useState("");
+  const imageDataUrl =
+    data?.generated_image_base64 && data?.generated_image_mime_type
+      ? `data:${data.generated_image_mime_type};base64,${data.generated_image_base64}`
+      : null;
 
-  if (!data) return null;
+  if (!data) {
+    return <div className="placeholder-panel">Сгенерируй пост, и здесь появится редактор.</div>;
+  }
+
   const chunks = data.knowledge_chunks || [];
 
   async function handleCopy() {
@@ -204,6 +274,18 @@ function GeneratedResultView({ data, editedText, onEditText }) {
     }
   }
 
+  function handleImageDownload() {
+    if (!imageDataUrl) return;
+    const mime = (data?.generated_image_mime_type || "").toLowerCase();
+    const extension = mime.includes("jpeg") ? "jpg" : mime.includes("webp") ? "webp" : "png";
+    const link = document.createElement("a");
+    link.href = imageDataUrl;
+    link.download = `generated-image.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
   return (
     <section className="result-view">
       <header className="result-header">
@@ -214,7 +296,7 @@ function GeneratedResultView({ data, editedText, onEditText }) {
       </header>
 
       <div className="chips">
-        <span className="chip">Тип: {data.content_type}</span>
+        <span className="chip">Тип: {prettyContentType(data.content_type)}</span>
         {data.theme ? <span className="chip">Тема: {data.theme}</span> : null}
         {data.tone ? <span className="chip">Тон: {data.tone}</span> : null}
       </div>
@@ -245,6 +327,22 @@ function GeneratedResultView({ data, editedText, onEditText }) {
         </section>
       ) : null}
 
+      {data.content_type === "image" ? (
+        <section className="block">
+          <h4>Сгенерированное изображение</h4>
+          {imageDataUrl ? (
+            <div className="generated-image-wrap">
+              <img src={imageDataUrl} alt="Сгенерированное изображение" className="generated-image-preview" />
+              <button type="button" className="secondary-btn" onClick={handleImageDownload}>
+                Скачать изображение
+              </button>
+            </div>
+          ) : (
+            <p className="empty">Изображение не получено. Попробуй сгенерировать ещё раз.</p>
+          )}
+        </section>
+      ) : null}
+
       {data.video_script ? (
         <section className="block">
           <h4>Сценарий видео</h4>
@@ -259,7 +357,7 @@ function GeneratedResultView({ data, editedText, onEditText }) {
             {chunks.map((chunk, idx) => (
               <article key={`${chunk.filename || chunk.title}-${idx}`} className="card">
                 <strong>{chunk.title || chunk.filename || "Фрагмент"}</strong>
-                <p className="muted">Score: {chunk.score}</p>
+                <p className="muted">Оценка: {chunk.score}</p>
                 <p className="muted">{chunk.reason}</p>
                 {chunk.snippet_preview ? <p>{chunk.snippet_preview}</p> : null}
               </article>
@@ -272,6 +370,7 @@ function GeneratedResultView({ data, editedText, onEditText }) {
 }
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState("analyze");
   const [analyzeForm, setAnalyzeForm] = useState({ source: "", post_limit: 30, language: "ru" });
   const [generateForm, setGenerateForm] = useState({
     prompt: "",
@@ -291,13 +390,25 @@ export default function App() {
   const [analyzeError, setAnalyzeError] = useState("");
   const [generateError, setGenerateError] = useState("");
 
-  const quickSummary = useMemo(() => {
-    if (!analyzeResult) return "Запусти анализ и здесь появится сводка.";
-    const count = analyzeResult?.metrics?.total_posts_analyzed || 0;
-    const tags = (analyzeResult?.ai?.search_tags || []).slice(0, 3).join(", ");
-    const competitors = analyzeResult?.competitors_found?.length || 0;
-    return `Постов: ${count}. Теги: ${tags || "—"}. Конкурентов: ${competitors}.`;
-  }, [analyzeResult]);
+  const languageOptions = [
+    { value: "ru", label: "Русский" },
+    { value: "en", label: "English" },
+  ];
+  const contentTypeOptions = [
+    { value: "text", label: "Текст" },
+    { value: "story", label: "Сторис" },
+    { value: "image", label: "Текст + изображение" },
+    { value: "video", label: "Видео" },
+  ];
+  const lengthOptions = [
+    { value: "short", label: "Короткая" },
+    { value: "medium", label: "Средняя" },
+    { value: "long", label: "Длинная" },
+  ];
+  const publishOptions = [
+    { value: "no", label: "Нет" },
+    { value: "yes", label: "Да" },
+  ];
 
   async function onAnalyzeSubmit(event) {
     event.preventDefault();
@@ -340,153 +451,169 @@ export default function App() {
   }
 
   return (
-    <main className="app">
-      <header className="hero">
-        <p className="eyebrow">DIO AI MARKETING</p>
-        <h1>VK Аналитика и Генерация Контента</h1>
-        <p>{quickSummary}</p>
+    <main className="app-shell">
+      <header className="brand-strip">
+        <div className="brand-strip-left">
+          <img className="brand-logo" src={BRAND_LOGO_URL} alt="Лого ДИО-Консалт" loading="lazy" />
+          <div>
+            <p className="eyebrow">ДИО-Консалт</p>
+            <p className="brand-subline">VK Аналитика + Контент-студия</p>
+          </div>
+        </div>
+        <nav className="top-nav">
+          <button
+            type="button"
+            className={`nav-btn ${activeTab === "analyze" ? "nav-btn-active" : ""}`}
+            onClick={() => setActiveTab("analyze")}
+          >
+            Анализ VK-групп
+          </button>
+          <button
+            type="button"
+            className={`nav-btn ${activeTab === "generate" ? "nav-btn-active" : ""}`}
+            onClick={() => setActiveTab("generate")}
+          >
+            Генерация контента
+          </button>
+        </nav>
       </header>
 
-      <section className="module">
-        <div className="module-head">
-          <h2>Анализ группы</h2>
-        </div>
-        <form onSubmit={onAnalyzeSubmit} className="form">
-          <label>
-            Ссылка / screen_name / id
-            <input
-              value={analyzeForm.source}
-              onChange={(e) => setAnalyzeForm((s) => ({ ...s, source: e.target.value }))}
-              placeholder="https://vk.com/diocon"
-              required
-            />
-          </label>
-
-          <div className="row">
+      {activeTab === "analyze" ? (
+        <section className="module">
+          <div className="module-head">
+            <h2>Анализ группы</h2>
+          </div>
+          <form onSubmit={onAnalyzeSubmit} className="form">
             <label>
-              Лимит постов
+              Ссылка / screen_name / id
               <input
-                type="number"
-                min="1"
-                max="100"
-                value={analyzeForm.post_limit}
-                onChange={(e) => setAnalyzeForm((s) => ({ ...s, post_limit: e.target.value }))}
+                value={analyzeForm.source}
+                onChange={(e) => setAnalyzeForm((s) => ({ ...s, source: e.target.value }))}
+                placeholder="https://vk.com/diocon"
+                required
               />
             </label>
-            <label>
-              Язык ответа
-              <select
-                value={analyzeForm.language}
-                onChange={(e) => setAnalyzeForm((s) => ({ ...s, language: e.target.value }))}
-              >
-                <option value="ru">ru</option>
-                <option value="en">en</option>
-              </select>
-            </label>
+
+            <div className="row">
+              <label>
+                Лимит постов
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={analyzeForm.post_limit}
+                  onChange={(e) => setAnalyzeForm((s) => ({ ...s, post_limit: e.target.value }))}
+                />
+              </label>
+              <label>
+                Язык ответа
+                <FancySelect
+                  value={analyzeForm.language}
+                  onChange={(nextValue) => setAnalyzeForm((s) => ({ ...s, language: nextValue }))}
+                  options={languageOptions}
+                />
+              </label>
+            </div>
+
+            <button type="submit" disabled={analyzeLoading}>
+              {analyzeLoading ? "Анализируем..." : "Запустить анализ"}
+            </button>
+          </form>
+          {analyzeError ? <p className="error">{analyzeError}</p> : null}
+          <AnalyzeResultView data={analyzeResult} />
+        </section>
+      ) : (
+        <section className="module">
+          <div className="module-head">
+            <h2>Генерация поста</h2>
           </div>
-
-          <button type="submit" disabled={analyzeLoading}>
-            {analyzeLoading ? "Анализируем..." : "Запустить анализ"}
-          </button>
-        </form>
-        {analyzeError ? <p className="error">{analyzeError}</p> : null}
-        <AnalyzeResultView data={analyzeResult} />
-      </section>
-
-      <section className="module">
-        <div className="module-head">
-          <h2>Генерация поста</h2>
-        </div>
-        <form onSubmit={onGenerateSubmit} className="form">
-          <label>
-            Промпт
-            <textarea
-              value={generateForm.prompt}
-              onChange={(e) => setGenerateForm((s) => ({ ...s, prompt: e.target.value }))}
-              placeholder="Напиши пост про внедрение 1С для малого бизнеса"
-              rows={5}
-              required
-            />
-          </label>
-
-          <div className="row">
+          <form onSubmit={onGenerateSubmit} className="form">
             <label>
-              Тема
-              <input
-                value={generateForm.theme}
-                onChange={(e) => setGenerateForm((s) => ({ ...s, theme: e.target.value }))}
-                placeholder="автоматизация"
+              Промпт
+              <textarea
+                value={generateForm.prompt}
+                onChange={(e) => setGenerateForm((s) => ({ ...s, prompt: e.target.value }))}
+                placeholder="Напиши пост про внедрение 1С для малого бизнеса"
+                rows={5}
+                required
               />
             </label>
-            <label>
-              Тон
-              <input
-                value={generateForm.tone}
-                onChange={(e) => setGenerateForm((s) => ({ ...s, tone: e.target.value }))}
-                placeholder="деловой"
-              />
-            </label>
-          </div>
 
-          <div className="row">
-            <label>
-              Тип контента
-              <select
-                value={generateForm.content_type}
-                onChange={(e) => setGenerateForm((s) => ({ ...s, content_type: e.target.value }))}
-              >
-                <option value="text">text</option>
-                <option value="story">story</option>
-                <option value="image">image</option>
-                <option value="video">video</option>
-              </select>
-            </label>
+            <div className="row">
+              <label>
+                Тема
+                <input
+                  value={generateForm.theme}
+                  onChange={(e) => setGenerateForm((s) => ({ ...s, theme: e.target.value }))}
+                  placeholder="автоматизация"
+                />
+              </label>
+              <label>
+                Тон
+                <input
+                  value={generateForm.tone}
+                  onChange={(e) => setGenerateForm((s) => ({ ...s, tone: e.target.value }))}
+                  placeholder="деловой"
+                />
+              </label>
+            </div>
 
-            <label>
-              Длина
-              <select
-                value={generateForm.length}
-                onChange={(e) => setGenerateForm((s) => ({ ...s, length: e.target.value }))}
-              >
-                <option value="short">short</option>
-                <option value="medium">medium</option>
-                <option value="long">long</option>
-              </select>
-            </label>
-          </div>
+            <div className="row">
+              <label>
+                Тип контента
+                <FancySelect
+                  value={generateForm.content_type}
+                  onChange={(nextValue) => setGenerateForm((s) => ({ ...s, content_type: nextValue }))}
+                  options={contentTypeOptions}
+                />
+              </label>
 
-          <div className="row compact">
-            <label>
-              Язык ответа
-              <select
-                value={generateForm.language}
-                onChange={(e) => setGenerateForm((s) => ({ ...s, language: e.target.value }))}
-              >
-                <option value="ru">ru</option>
-                <option value="en">en</option>
-              </select>
-            </label>
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={generateForm.publish}
-                onChange={(e) => setGenerateForm((s) => ({ ...s, publish: e.target.checked }))}
-              />
-              Сразу публиковать
-            </label>
-          </div>
+              <label>
+                Длина
+                <FancySelect
+                  value={generateForm.length}
+                  onChange={(nextValue) => setGenerateForm((s) => ({ ...s, length: nextValue }))}
+                  options={lengthOptions}
+                />
+              </label>
+            </div>
 
-          <button type="submit" disabled={generateLoading}>
-            {generateLoading ? "Генерируем..." : "Сгенерировать"}
-          </button>
-        </form>
-        {generateError ? <p className="error">{generateError}</p> : null}
-        <GeneratedResultView
-          data={generateResult}
-          editedText={editedGeneratedText}
-          onEditText={setEditedGeneratedText}
-        />
-      </section>
+            <div className="row compact">
+              <label>
+                Язык ответа
+                <FancySelect
+                  value={generateForm.language}
+                  onChange={(nextValue) => setGenerateForm((s) => ({ ...s, language: nextValue }))}
+                  options={languageOptions}
+                />
+              </label>
+              <label>
+                Сразу публиковать
+                <FancySelect
+                  value={generateForm.publish ? "yes" : "no"}
+                  onChange={(nextValue) =>
+                    setGenerateForm((s) => ({
+                      ...s,
+                      publish: nextValue === "yes",
+                    }))
+                  }
+                  options={publishOptions}
+                />
+              </label>
+            </div>
+
+            <button type="submit" disabled={generateLoading}>
+              {generateLoading ? "Генерируем..." : "Сгенерировать"}
+            </button>
+          </form>
+          {generateError ? <p className="error">{generateError}</p> : null}
+          <GeneratedResultView
+            data={generateResult}
+            editedText={editedGeneratedText}
+            onEditText={setEditedGeneratedText}
+          />
+        </section>
+      )}
     </main>
   );
 }
