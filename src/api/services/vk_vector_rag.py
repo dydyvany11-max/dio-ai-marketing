@@ -15,18 +15,18 @@ from src.api.config import PROJECT_ROOT
 logger = logging.getLogger(__name__)
 
 try:
-    import chromadb  # type: ignore
-except Exception:  # pragma: no cover - optional dependency
+    import chromadb  
+except Exception:  
     chromadb = None
 
 try:
     from langchain_text_splitters import RecursiveCharacterTextSplitter
-except Exception:  # pragma: no cover - optional dependency
+except Exception: 
     RecursiveCharacterTextSplitter = None
 
 try:
     from sentence_transformers import SentenceTransformer
-except Exception:  # pragma: no cover - optional dependency
+except Exception: 
     SentenceTransformer = None
 
 

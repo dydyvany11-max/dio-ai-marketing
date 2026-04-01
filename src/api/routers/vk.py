@@ -1,5 +1,7 @@
 ﻿import json
 import os
+import re
+from collections import Counter
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
@@ -32,6 +34,7 @@ from src.api.services.vk_analysis_helpers import (
     _filter_tags_by_group_context,
     _is_query_term,
     _is_query_word,
+    _tokenize_loose,
     _is_group_auth_restriction,
     _render_group_report_png,
     _search_vk_competitors,
@@ -44,6 +47,7 @@ from src.api.services.vk_public import (
     fetch_public_group_data,
     has_vk_browser_profile,
     launch_vk_browser_login,
+    search_public_groups,
     vk_browser_profile_dir,
 )
 from src.api.services.vk_publisher import VKPublisher, VKPublishRequest as VKPublishPayload
@@ -803,20 +807,262 @@ def vk_group_analyze(
             if _is_query_term(str(tag))
         ]
     use_ai_tags_only = bool(ai_status.get("provider") == "gigachat" and ai_status.get("available"))
-    if use_ai_tags_only and ai_tags:
+    group_context_name = f"{group.get('name', '')} {group.get('screen_name') or ''}".strip()
+    model_tags_cleaned = [str(tag).strip() for tag in (ai_insights.search_tags or []) if str(tag).strip()]
+    ai_tags_from_model = bool(model_tags_cleaned)
+    if ai_tags_from_model:
+        ai_tags = model_tags_cleaned[:16]
+    if use_ai_tags_only and ai_tags and not ai_tags_from_model:
         ai_tags = _filter_tags_by_group_context(
             ai_tags,
-            group_name=group.get("name", ""),
+            group_name=group_context_name,
             group_description=group.get("description"),
             group_activity=group.get("activity"),
             limit=16,
         )
+    if not ai_tags:
+        fallback_ai_tags = _extract_ai_search_tags(ai_insights, limit=16)
+        if fallback_ai_tags:
+            ai_tags = _filter_tags_by_group_context(
+                fallback_ai_tags,
+                group_name=group_context_name,
+                group_description=group.get("description"),
+                group_activity=group.get("activity"),
+                limit=16,
+            )
+        if not ai_tags:
+            ai_tags = [str(tag).strip().lower() for tag in fallback_ai_tags if _is_query_term(str(tag))][:8]
+    if not ai_tags:
+        brand_tokens = {
+            token
+            for token in _tokenize_loose(f"{group.get('name', '')} {group.get('screen_name') or ''}")
+            if len(token) >= 4
+        }
+        text_pool = " ".join(
+            str(part or "")
+            for part in [
+                group.get("activity"),
+                group.get("description"),
+                " ".join(str(post.get("text") or "") for post in posts[:40]),
+                " ".join(str(item or "") for item in (ai_insights.audience_interests or [])),
+                " ".join(str(item or "") for item in (ai_insights.potential_competitors or [])),
+                str(ai_insights.summary or ""),
+            ]
+        )
+        token_counts: Counter[str] = Counter()
+        for token in _tokenize_loose(text_pool):
+            if token in brand_tokens:
+                continue
+            if not _is_query_word(token):
+                continue
+            token_counts[token] += 1
+        ai_tags = [token for token, _ in token_counts.most_common(10)]
+        ai_tags = _filter_tags_by_group_context(
+            ai_tags,
+            group_name=group_context_name,
+            group_description=group.get("description"),
+            group_activity=group.get("activity"),
+            limit=10,
+        )
+    if not ai_tags:
+        ai_tags = [
+            token
+            for token in _tokenize_loose(
+                " ".join(
+                    [
+                        str(group.get("activity") or ""),
+                        str(group.get("description") or ""),
+                        " ".join(str(post.get("text") or "") for post in posts[:25]),
+                    ]
+                )
+            )
+            if _is_query_word(token)
+        ][:6]
+    if not ai_tags:
+        brand_tokens = {
+            token for token in _tokenize_loose(f"{group.get('name', '')} {group.get('screen_name') or ''}") if len(token) >= 4
+        }
+        fallback_counter: Counter[str] = Counter()
+        fallback_texts = [
+            *[str(item or "") for item in (ai_insights.audience_interests or [])],
+            *[str(item or "") for item in (ai_insights.potential_competitors or [])],
+            str(ai_insights.summary or ""),
+            str(group.get("activity") or ""),
+            str(group.get("description") or ""),
+            " ".join(str(post.get("text") or "") for post in posts[:25]),
+        ]
+        for chunk in fallback_texts:
+            for token in _tokenize_loose(chunk):
+                if token in brand_tokens:
+                    continue
+                if not _is_query_word(token):
+                    continue
+                fallback_counter[token] += 1
+        ai_tags = [token for token, _ in fallback_counter.most_common(10)]
+
+    if not ai_tags:
+        phrase_tags: list[str] = []
+        for phrase in list(ai_insights.audience_interests or []) + list(ai_insights.potential_competitors or []):
+            normalized = " ".join(_tokenize_loose(str(phrase)))
+            if not normalized:
+                continue
+            if normalized in phrase_tags:
+                continue
+            phrase_tags.append(normalized)
+            if len(phrase_tags) >= 6:
+                break
+        ai_tags = phrase_tags
+
+    if not ai_tags:
+        brand_tokens = {
+            token for token in _tokenize_loose(f"{group.get('name', '')} {group.get('screen_name') or ''}") if len(token) >= 4
+        }
+        guaranteed_tags: list[str] = []
+        seen_tags: set[str] = set()
+        candidate_texts = [
+            *[str(item or "") for item in (ai_insights.audience_interests or [])],
+            *[str(item or "") for item in (ai_insights.potential_competitors or [])],
+            str(ai_insights.summary or ""),
+        ]
+        for raw in candidate_texts:
+            raw_phrase = " ".join(str(raw or "").split()).strip().lower()
+            raw_tokens = _tokenize_loose(raw_phrase)
+            concise_words = [
+                token for token in raw_tokens if _is_query_word(token) and token not in brand_tokens
+            ]
+            concise_phrase = " ".join(concise_words[:3]) if concise_words else ""
+            if concise_phrase and concise_phrase not in seen_tags:
+                single_brand = len(concise_words) == 1 and concise_words[0] in brand_tokens
+                if not single_brand and _is_query_term(concise_phrase):
+                    seen_tags.add(concise_phrase)
+                    guaranteed_tags.append(concise_phrase)
+                    if len(guaranteed_tags) >= 8:
+                        break
+
+            words = [
+                token
+                for token in raw_tokens
+                if _is_query_word(token) and token not in brand_tokens
+            ]
+            if not words:
+                continue
+            variants = [" ".join(words[:3]), words[0]]
+            for variant in variants:
+                normalized = " ".join(str(variant or "").split()).strip().lower()
+                if not normalized or normalized in seen_tags:
+                    continue
+                if not _is_query_term(normalized):
+                    continue
+                seen_tags.add(normalized)
+                guaranteed_tags.append(normalized)
+                if len(guaranteed_tags) >= 8:
+                    break
+            if len(guaranteed_tags) >= 8:
+                break
+        ai_tags = guaranteed_tags
+
+    if not ai_tags_from_model:
+        # Final cleanup: drop brand-only tags and guarantee non-empty niche tags.
+        identity_terms = {
+            token for token in _tokenize_loose(f"{group.get('name', '')} {group.get('screen_name') or ''} {group.get('site') or ''}") if len(token) >= 2
+        }
+        for raw_url in re.findall(r"https?://[^\s)]+", str(group.get("description") or ""), flags=re.IGNORECASE):
+            tail = raw_url.rstrip("/").rsplit("/", 1)[-1]
+            for token in _tokenize_loose(tail):
+                if len(token) >= 3:
+                    identity_terms.add(token)
+    
+        cleaned_tags: list[str] = []
+        seen_cleaned: set[str] = set()
+        for raw_tag in ai_tags:
+            normalized = " ".join(_tokenize_loose(str(raw_tag or ""))).strip().lower()
+            if not normalized or normalized in seen_cleaned:
+                continue
+            words = [token for token in _tokenize_loose(normalized) if _is_query_word(token)]
+            if not words:
+                continue
+            if all(word in identity_terms for word in words):
+                continue
+            seen_cleaned.add(normalized)
+            cleaned_tags.append(normalized)
+    
+        ai_tags = cleaned_tags[:10]
+    
+        if len(ai_tags) < 2:
+            extra_tags: list[str] = []
+            seen_extra: set[str] = set(ai_tags)
+            source_texts = [
+                *[str(item or "") for item in (ai_insights.audience_interests or [])],
+                *[str(item or "") for item in (ai_insights.potential_competitors or [])],
+                str(ai_insights.summary or ""),
+                str(group.get("activity") or ""),
+                " ".join(str(post.get("text") or "") for post in posts[:25]),
+            ]
+            for raw in source_texts:
+                words = [
+                    token
+                    for token in _tokenize_loose(raw)
+                    if _is_query_word(token) and token not in identity_terms
+                ]
+                if not words:
+                    continue
+                phrase = " ".join(words[:3]).strip()
+                for candidate in [phrase, words[0]]:
+                    normalized = " ".join(_tokenize_loose(candidate)).strip().lower()
+                    if not normalized or normalized in seen_extra:
+                        continue
+                    if not _is_query_term(normalized):
+                        continue
+                    seen_extra.add(normalized)
+                    extra_tags.append(normalized)
+                    if len(ai_tags) + len(extra_tags) >= 10:
+                        break
+                if len(ai_tags) + len(extra_tags) >= 10:
+                    break
+            ai_tags = (ai_tags + extra_tags)[:10]
+    
+    # Absolute safeguard: never return empty search_tags when AI gave any topical text.
+    if not ai_tags:
+        emergency_tags: list[str] = []
+        for raw in list(ai_insights.audience_interests or []) + list(ai_insights.potential_competitors or []):
+            normalized = " ".join(_tokenize_loose(str(raw or ""))).strip().lower()
+            if not normalized:
+                continue
+            if normalized not in emergency_tags:
+                emergency_tags.append(normalized)
+            if len(emergency_tags) >= 8:
+                break
+        if not emergency_tags:
+            normalized_activity = " ".join(_tokenize_loose(str(group.get("activity") or ""))).strip().lower()
+            if normalized_activity:
+                emergency_tags.append(normalized_activity)
+        ai_tags = emergency_tags
+
+    # Final raw fallback: if everything above still produced nothing, keep AI phrases as-is.
+    # This prevents empty tags in response even when token-level filters are too strict.
+    if not ai_tags:
+        raw_tags: list[str] = []
+        seen_raw: set[str] = set()
+        for raw in list(ai_insights.audience_interests or []) + list(ai_insights.potential_competitors or []):
+            value = " ".join(str(raw or "").split()).strip()
+            if not value:
+                continue
+            key = value.lower()
+            if key in seen_raw:
+                continue
+            seen_raw.add(key)
+            raw_tags.append(value)
+            if len(raw_tags) >= 8:
+                break
+        ai_tags = raw_tags
+
     ai_insights.search_tags = ai_tags
     ai_topic_labels = _extract_ai_topic_labels(ai_insights, limit=4)
 
     competitors_found: list[dict] = []
     if not (use_ai_tags_only and not ai_tags):
-        for token in _resolve_access_tokens():
+        search_tokens = _resolve_access_tokens() or [""]
+        for token in search_tokens:
             try:
                 competitors_found = _search_vk_competitors(
                     vk_client,
@@ -831,6 +1077,7 @@ def vk_group_analyze(
                     ai_tags=ai_tags,
                     topic_labels=ai_topic_labels,
                     use_ai_tags_only=use_ai_tags_only and bool(ai_tags),
+                    public_only=True,
                     limit=5,
                 )
                 if competitors_found:

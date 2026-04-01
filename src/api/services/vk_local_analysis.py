@@ -79,6 +79,10 @@ _EXTRA_STOPWORDS = {
     "oldest",
     "unavailable",
     "because",
+    "slide",
+    "next",
+    "previous",
+    "swipe",
 }
 
 

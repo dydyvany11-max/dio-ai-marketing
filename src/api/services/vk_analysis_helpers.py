@@ -108,6 +108,28 @@ _WEAK_QUERY_WORDS = {
     "year",
     "which",
     "new",
+    "support",
+    "service",
+    "services",
+    "solution",
+    "solutions",
+    "company",
+    "partner",
+    "partners",
+    "business",
+    "online",
+    "\u043f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430",
+    "\u0441\u0435\u0440\u0432\u0438\u0441",
+    "\u0443\u0441\u043b\u0443\u0433\u0438",
+    "\u0443\u0441\u043b\u0443\u0433\u0430",
+    "\u043a\u043e\u043c\u043f\u0430\u043d\u0438\u044f",
+    "\u043f\u0430\u0440\u0442\u043d\u0435\u0440",
+    "\u043f\u0430\u0440\u0442\u043d\u0451\u0440",
+    "\u043f\u0430\u0440\u0442\u043d\u0435\u0440\u044b",
+    "\u043f\u0430\u0440\u0442\u043d\u0451\u0440\u044b",
+    "\u043e\u043d\u043b\u0430\u0439\u043d",
+    "\u0446\u0435\u043d\u0442\u0440",
+    "\u0431\u0438\u0437\u043d\u0435\u0441",
 }
 
 def _search_vk_competitors(
@@ -124,6 +146,7 @@ def _search_vk_competitors(
     ai_tags: list[str] | None = None,
     topic_labels: list[str] | None = None,
     use_ai_tags_only: bool = False,
+    public_only: bool = False,
     limit: int = 5,
 ) -> list[dict]:
     source_posts = source_posts or []
@@ -167,6 +190,9 @@ def _search_vk_competitors(
     for term in source_tags + meta_tags + name_tags + normalized_ai_tags:
         if _is_query_term(term) and term not in banned_name_terms:
             source_terms.add(term)
+            for token in _tokenize_loose(term):
+                if _is_query_word(token) and token not in banned_name_terms:
+                    source_terms.add(token)
 
     source_terms = {
         term
@@ -194,6 +220,11 @@ def _search_vk_competitors(
     )
     if not queries:
         return []
+    if public_only:
+        multiword = [query for query in queries if len([token for token in _tokenize_loose(query) if _is_query_word(token)]) >= 2]
+        if multiword:
+            queries = multiword + [query for query in queries if query not in multiword][:4]
+        queries = queries[:5]
 
     candidates: dict[str, dict] = {}
     current_screen_name_l = (current_screen_name or "").lower()
@@ -202,19 +233,22 @@ def _search_vk_competitors(
     for query in queries:
         query_tokens = {token for token in _tokenize_loose(query) if _is_query_word(token)}
         matched_terms = _match_terms(source_terms, query_tokens)
+        query_has_digit_anchor = any(any(ch.isdigit() for ch in token) for token in query_tokens)
 
-        try:
-            result = vk_client.call_api(
-                "groups.search",
-                access_token,
-                q=query,
-                count=25,
-                sort=0,
-                fields="members_count,activity,description,screen_name",
-            )
-            items = result.get("items", []) if isinstance(result, dict) else []
-        except Exception:
-            items = []
+        items: list[dict] = []
+        if not public_only:
+            try:
+                result = vk_client.call_api(
+                    "groups.search",
+                    access_token,
+                    q=query,
+                    count=25,
+                    sort=0,
+                    fields="members_count,activity,description,screen_name",
+                )
+                items = result.get("items", []) if isinstance(result, dict) else []
+            except Exception:
+                items = []
 
         for item in items:
             if not isinstance(item, dict):
@@ -241,6 +275,15 @@ def _search_vk_competitors(
                 ]
                 if part
             ).lower()
+            candidate_tokens_for_query = {
+                token for token in _tokenize_loose(haystack) if _is_query_word(token)
+            }
+            if not _candidate_matches_query(
+                query_tokens=query_tokens,
+                candidate_tokens=candidate_tokens_for_query,
+                require_digit_anchor=query_has_digit_anchor,
+            ):
+                continue
 
             entry = candidates.get(key)
             if entry is None:
@@ -262,8 +305,19 @@ def _search_vk_competitors(
             entry["_query_quality"] = max(entry["_query_quality"], _query_quality(query, source_terms))
             entry["_matched_terms"].update(matched_terms)
 
-        for item in search_public_groups(query, limit=8):
+        for item in search_public_groups(query, limit=8 if public_only else 8):
             if current_screen_name_l and item.screen_name.lower() == current_screen_name_l:
+                continue
+            candidate_tokens_for_query = {
+                token
+                for token in _tokenize_loose(f"{item.name} {item.screen_name}")
+                if _is_query_word(token)
+            }
+            if not _candidate_matches_query(
+                query_tokens=query_tokens,
+                candidate_tokens=candidate_tokens_for_query,
+                require_digit_anchor=query_has_digit_anchor,
+            ):
                 continue
             key = item.screen_name.lower()
             if key not in candidates:
@@ -341,6 +395,7 @@ def _search_vk_competitors(
         candidate["_metadata_overlap"] = sorted(metadata_overlap)
         candidate["_overlap_terms"] = sorted(overlap)
         candidate["_domain_overlap"] = sorted(domain_overlap)
+        candidate["_query_overlap_count"] = len(query_overlap)
         candidate["_score"] = score
         preliminary.append(candidate)
 
@@ -360,6 +415,7 @@ def _search_vk_competitors(
     ]
 
     validated: list[dict] = []
+    max_content_validate = 4 if public_only else 8
     for index, item in enumerate(preliminary[:12]):
         final_score = float(item.get("_score") or 0.0)
         metadata_overlap = set(item.get("_metadata_overlap") or [])
@@ -367,9 +423,9 @@ def _search_vk_competitors(
 
         content_overlap: set[str] = set()
         screen_name = str(item.get("screen_name") or "").strip()
-        if screen_name and index < 8:
+        if screen_name and index < max_content_validate:
             try:
-                public_data = fetch_public_group_data(screen_name, limit=8)
+                public_data = fetch_public_group_data(screen_name, limit=6 if public_only else 8)
                 candidate_posts = [{"text": post.text} for post in public_data.posts if (post.text or "").strip()]
                 if candidate_posts:
                     candidate_terms = set(_extract_source_tags(candidate_posts, limit=28))
@@ -429,17 +485,27 @@ def _search_vk_competitors(
             }
         )
 
-    if not validated:
+    if not validated and not public_only:
         fallback_queries = queries[:6]
         for fallback_query in fallback_queries:
+            query_tokens = {token for token in _tokenize_loose(fallback_query) if _is_query_word(token)}
+            query_has_digit_anchor = any(any(ch.isdigit() for ch in token) for token in query_tokens)
             for item in search_public_groups(fallback_query, limit=max(4, limit)):
                 screen_name = (item.screen_name or "").strip().lower()
                 if not screen_name:
                     continue
                 if current_screen_name_l and screen_name == current_screen_name_l:
                     continue
-                name_tokens = {token for token in _tokenize_loose(item.name) if _is_query_word(token)}
-                if domain_terms and not _match_terms(domain_terms, name_tokens):
+                candidate_tokens = {
+                    token
+                    for token in _tokenize_loose(f"{item.name} {item.screen_name}")
+                    if _is_query_word(token)
+                }
+                if not _candidate_matches_query(
+                    query_tokens=query_tokens,
+                    candidate_tokens=candidate_tokens,
+                    require_digit_anchor=query_has_digit_anchor,
+                ):
                     continue
                 validated.append(
                     {
@@ -459,7 +525,7 @@ def _search_vk_competitors(
             if len(validated) >= limit * 2:
                 break
 
-    if not validated and not use_ai_tags_only:
+    if not validated and not use_ai_tags_only and not public_only:
         source_name_query = " ".join((current_name or "").split())
         for item in search_public_groups(source_name_query, limit=max(3, limit * 2)):
             screen_name = (item.screen_name or "").strip().lower()
@@ -519,21 +585,48 @@ def _build_competitor_queries(
     allow_name_fallback: bool = True,
 ) -> list[str]:
     queries: list[str] = []
+    token_counter: Counter[str] = Counter()
 
     for term in ai_tags[:10]:
         normalized = _normalize_query_for_search(term)
         if normalized:
             queries.append(normalized)
+        for token in _tokenize_loose(term):
+            if _is_query_word(token):
+                token_counter[token] += 1
 
     for term in source_tags[:10]:
         normalized = _normalize_query_for_search(term)
         if normalized:
             queries.append(normalized)
+        for token in _tokenize_loose(term):
+            if _is_query_word(token):
+                token_counter[token] += 1
 
     for term in meta_tags[:8]:
         normalized = _normalize_query_for_search(term)
         if normalized:
             queries.append(normalized)
+        for token in _tokenize_loose(term):
+            if _is_query_word(token):
+                token_counter[token] += 1
+
+    anchor_tokens = {
+        token
+        for token, count in token_counter.items()
+        if count >= 2 or any(ch.isdigit() for ch in token)
+    }
+    ranked_tokens = sorted(
+        {
+            token
+            for token, count in token_counter.items()
+            if _is_specific_term(token) and (count >= 2 or any(ch.isdigit() for ch in token))
+        },
+        key=lambda value: (token_counter[value], _term_specificity(value), len(value)),
+        reverse=True,
+    )
+    for token in ranked_tokens[:10]:
+        queries.append(token)
 
     ranked = sorted(
         [term for term in source_terms if " " not in term],
@@ -565,6 +658,10 @@ def _build_competitor_queries(
             continue
         if not _is_query_term(normalized) or not _is_specific_term(normalized):
             continue
+        if anchor_tokens:
+            query_tokens = {token for token in _tokenize_loose(normalized) if _is_query_word(token)}
+            if not (query_tokens & anchor_tokens):
+                continue
         seen.add(normalized)
         deduped.append(normalized)
         if len(deduped) >= 22:
@@ -626,6 +723,18 @@ def _filter_tags_by_group_context(
     }
     normalized = _normalize_terms(list(tags or []), banned_terms=banned_name_terms, limit=limit * 2)
     filtered = [tag for tag in normalized if _term_supported_by_context(tag, context_terms)]
+    # If context is too sparse/noisy (common on public VK pages), keep meaningful non-brand tags
+    # instead of returning an empty list.
+    if not filtered:
+        for tag in normalized:
+            tokens = [token for token in _tokenize_loose(tag) if _is_query_word(token)]
+            if not tokens:
+                continue
+            if all(token in banned_name_terms for token in tokens):
+                continue
+            filtered.append(tag)
+            if len(filtered) >= limit:
+                break
     return filtered[:limit]
 
 
@@ -651,10 +760,15 @@ def _match_terms(source_terms: set[str], candidate_tokens: set[str]) -> set[str]
         source_words = [token for token in _tokenize_loose(source) if _is_query_word(token)]
         if not source_words:
             continue
-        if all(any(_tokens_similar(word, candidate) for candidate in candidate_words) for word in source_words):
+        similarity_hits = 0
+        for word in source_words:
+            if any(_tokens_similar(word, candidate) for candidate in candidate_words):
+                similarity_hits += 1
+        if similarity_hits == len(source_words):
             matched.add(source)
             continue
-        if any(any(_tokens_similar(word, candidate) for candidate in candidate_words) for word in source_words):
+        min_required = 1 if len(source_words) == 1 else 2
+        if similarity_hits >= min_required:
             matched.add(source)
     return matched
 
@@ -856,6 +970,31 @@ def _query_quality(query: str, source_terms: set[str]) -> float:
     return min(1.0, overlap / max(1, len(set(words))))
 
 
+def _candidate_matches_query(
+    *,
+    query_tokens: set[str],
+    candidate_tokens: set[str],
+    require_digit_anchor: bool,
+) -> bool:
+    if not query_tokens or not candidate_tokens:
+        return False
+
+    matched_query_tokens: set[str] = set()
+    for query_token in query_tokens:
+        if any(_tokens_similar(query_token, candidate) for candidate in candidate_tokens):
+            matched_query_tokens.add(query_token)
+
+    if not matched_query_tokens:
+        return False
+
+    if require_digit_anchor and not any(any(ch.isdigit() for ch in token) for token in matched_query_tokens):
+        return False
+
+    if len(query_tokens) >= 3 and len(matched_query_tokens) < 2:
+        return False
+    return True
+
+
 def _is_query_term(text: str) -> bool:
     words = [word.strip().lower() for word in _tokenize_loose(str(text or "")) if word.strip()]
     if not words:
@@ -904,7 +1043,8 @@ def _is_specific_term(term: str, banned_terms: set[str] | None = None) -> bool:
         return False
     if all(token in banned_terms for token in tokens):
         return False
-    strong_tokens = [token for token in tokens if (len(token) >= 5 or any(ch.isdigit() for ch in token))]
+    # Allow compact but meaningful niche words (e.g. "юмор", "мемы", "cs2").
+    strong_tokens = [token for token in tokens if (len(token) >= 4 or any(ch.isdigit() for ch in token))]
     return bool(strong_tokens)
 
 

@@ -98,3 +98,6 @@ secrets.env
 DIORag.iml
 .iml
 *.session
+
+# Frontend
+node_modules/

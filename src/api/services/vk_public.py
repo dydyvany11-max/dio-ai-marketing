@@ -106,7 +106,7 @@ def search_public_groups(query: str, limit: int = 5) -> list[PublicVKSearchResul
     if len(clean_query) < 2:
         return []
 
-    url = f"https://vk.com/search?c%5Bsection%5D=communities&c%5Bq%5D={quote(clean_query)}"
+    url = f"https://vk.com/search/communities?q={quote(clean_query)}"
     if sync_playwright is not None:
         with sync_playwright() as playwright:
             if has_vk_browser_profile():
@@ -121,6 +121,15 @@ def search_public_groups(query: str, limit: int = 5) -> list[PublicVKSearchResul
                 page = context.new_page()
                 page.goto(url, wait_until="domcontentloaded", timeout=60000)
                 page.wait_for_timeout(3500)
+                try:
+                    search_input = page.locator("input[placeholder='Enter a search'], input[placeholder='Search']").first
+                    if search_input.count() > 0:
+                        search_input.click(timeout=1200)
+                        search_input.fill(clean_query, timeout=2000)
+                        search_input.press("Enter", timeout=1200)
+                        page.wait_for_timeout(2200)
+                except Exception:
+                    pass
                 raw_links = page.evaluate(
                     """() => Array.from(document.querySelectorAll('a[href]'))
                     .map(a => ({href: a.getAttribute('href') || '', text: (a.textContent || '').trim()}))
@@ -142,8 +151,10 @@ def search_public_groups(query: str, limit: int = 5) -> list[PublicVKSearchResul
 
 def _search_public_groups_http(query: str, limit: int) -> list[PublicVKSearchResult]:
     urls = [
+        f"https://vk.com/search/communities?q={quote(query)}",
         f"https://vk.com/search?c%5Bsection%5D=communities&c%5Bq%5D={quote(query)}",
         f"https://m.vk.com/search?c%5Bsection%5D=communities&c%5Bq%5D={quote(query)}",
+        f"https://vk.com/search?section=communities&q={quote(query)}",
     ]
     headers = {"User-Agent": "Mozilla/5.0"}
     for url in urls:
@@ -258,6 +269,10 @@ def _fetch_from_context(context, urls: list[str], clean_name: str, limit: int, g
 def _fetch_from_page(page, url: str, clean_name: str, limit: int, group_id: int | None) -> PublicVKGroupData:
     page.goto(url, wait_until="domcontentloaded", timeout=60000)
     page.wait_for_timeout(4500)
+    try:
+        _scroll_feed_until_loaded(page, limit)
+    except Exception:
+        pass
 
     seen: set[str] = set()
     posts: list[PublicVKPost] = []
@@ -386,7 +401,13 @@ def _collect_visible_posts(
         text = _extract_post_text(node, fallback=str(parsed["text"]))
         if _looks_like_ui_text(text):
             text = ""
-        if len(text) < 8 and int(parsed["likes"]) == 0 and int(parsed["comments"]) == 0 and int(parsed["views"]) == 0:
+        if (
+            len(text) < 8
+            and int(parsed["likes"]) == 0
+            and int(parsed["comments"]) == 0
+            and int(parsed["views"]) == 0
+            and int(parsed["timestamp"]) == 0
+        ):
             continue
 
         likes = int(html_metrics.get("likes") or parsed["likes"])
@@ -480,6 +501,7 @@ def _extract_search_results(raw_links: list[dict], query: str, limit: int) -> li
         for token in re.findall(r"[a-zA-Z\u0430-\u044f\u0410-\u042f\u0451\u04010-9]+", query)
         if len(token) >= 2
     }
+    query_tokens_canon = {_canon_search_token(token) for token in query_tokens}
     for item in raw_links:
         href = str(item.get("href") or "").strip()
         text = " ".join(str(item.get("text") or "").split())
@@ -487,6 +509,8 @@ def _extract_search_results(raw_links: list[dict], query: str, limit: int) -> li
             continue
         path = href.split("?", 1)[0].strip("/")
         if not path or "/" in path or path in ignored:
+            continue
+        if path.startswith("audio") or path.startswith("away.php") or path.endswith(".php"):
             continue
         if path in seen:
             continue
@@ -500,13 +524,21 @@ def _extract_search_results(raw_links: list[dict], query: str, limit: int) -> li
             for token in re.findall(r"[a-zA-Z\u0430-\u044f\u0410-\u042f\u0451\u04010-9]+", haystack)
             if len(token) >= 2
         }
+        haystack_tokens_canon = {_canon_search_token(token) for token in haystack_tokens}
         if query_tokens:
             overlap = 0
             for token in query_tokens:
-                if token in haystack_tokens:
+                token_canon = _canon_search_token(token)
+                if token in haystack_tokens or token_canon in haystack_tokens_canon:
                     overlap += 1
                     continue
                 if any(item.startswith(token) or token.startswith(item) for item in haystack_tokens):
+                    overlap += 1
+                    continue
+                if any(
+                    item.startswith(token_canon) or token_canon.startswith(item)
+                    for item in haystack_tokens_canon
+                ):
                     overlap += 1
             if overlap == 0:
                 continue
@@ -515,6 +547,31 @@ def _extract_search_results(raw_links: list[dict], query: str, limit: int) -> li
         if len(results) >= limit:
             break
     return results
+
+
+def _canon_search_token(value: str) -> str:
+    token = (value or "").strip().lower()
+    if not token:
+        return ""
+    # Unify visually similar Cyrillic/Latin letters to improve matches like "1с" vs "1c".
+    table = str.maketrans(
+        {
+            "а": "a",
+            "е": "e",
+            "о": "o",
+            "р": "p",
+            "с": "c",
+            "у": "y",
+            "к": "k",
+            "м": "m",
+            "т": "t",
+            "х": "x",
+            "в": "b",
+            "н": "h",
+            "ё": "e",
+        }
+    )
+    return token.translate(table)
 
 
 def _parse_post_block(raw_text: str) -> dict[str, object]:

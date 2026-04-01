@@ -6,7 +6,7 @@ try:
     from sklearn.cluster import DBSCAN, KMeans
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.mixture import GaussianMixture
-except Exception:  # pragma: no cover - fallback when sklearn is missing
+except Exception:  
     DBSCAN = KMeans = GaussianMixture = None
     TfidfVectorizer = None
 
@@ -85,7 +85,6 @@ def _auto_cluster_labels(
     if n_docs <= 1:
         return np.zeros(n_docs, dtype=int), "single", 0.0
 
-    # 1) Try DBSCAN for natural density clusters
     if DBSCAN:
         db_labels = DBSCAN(eps=eps, min_samples=min_samples, metric="cosine").fit_predict(matrix)
         unique = [label for label in np.unique(db_labels) if label != -1]
@@ -93,12 +92,12 @@ def _auto_cluster_labels(
         if len(unique) >= 2 and noise_ratio <= 0.6:
             return db_labels, "dbscan", noise_ratio
 
-    # 2) Fall back to KMeans for stable partitioning
+
     if KMeans:
         k = max(2, min(n_clusters, n_docs))
         return KMeans(n_clusters=k, n_init="auto", random_state=random_state).fit_predict(matrix), "kmeans", 0.0
 
-    # 3) Final fallback: single cluster
+    
     return np.zeros(n_docs, dtype=int), "single", 0.0
 
 def build_topics(
