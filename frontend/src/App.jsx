@@ -250,7 +250,20 @@ function AnalyzeResultView({ data }) {
   );
 }
 
-function GeneratedResultView({ data, editedText, onEditText }) {
+function GeneratedResultView({
+  data,
+  editedText,
+  onEditText,
+  editedImagePrompt,
+  onEditImagePrompt,
+  onRegenerateImage,
+  regenerateImageLoading,
+  regenerateImageError,
+  onPublishEdited,
+  publishLoading,
+  publishError,
+  publishSuccess,
+}) {
   const [copyStatus, setCopyStatus] = useState("");
   const imageDataUrl =
     data?.generated_image_base64 && data?.generated_image_mime_type
@@ -303,12 +316,21 @@ function GeneratedResultView({ data, editedText, onEditText }) {
 
       <section className="block editor-wrap">
         <div className="editor-head">
-          <h4>Текст (можно редактировать вручную)</h4>
+          <h4>Текст</h4>
           <div className="editor-actions">
             <span className="muted">Символов: {formatNumber((editedText || "").length)}</span>
             <button type="button" className="secondary-btn" onClick={handleCopy}>
               Копировать
             </button>
+            {!data.published ? (
+              <button
+                type="button"
+                onClick={onPublishEdited}
+                disabled={publishLoading || !(editedText || "").trim()}
+              >
+                {publishLoading ? "Публикуем..." : "Опубликовать"}
+              </button>
+            ) : null}
           </div>
         </div>
         <textarea
@@ -318,12 +340,32 @@ function GeneratedResultView({ data, editedText, onEditText }) {
           rows={10}
         />
         {copyStatus ? <p className="copy-status">{copyStatus}</p> : null}
+        {publishError ? <p className="error">{publishError}</p> : null}
+        {publishSuccess ? <p className="copy-status">{publishSuccess}</p> : null}
       </section>
 
-      {data.image_prompt ? (
-        <section className="block">
-          <h4>Промпт для изображения</h4>
-          <p>{data.image_prompt}</p>
+      {data.content_type === "image" ? (
+        <section className="block editor-wrap">
+          <div className="editor-head">
+            <h4>Промпт для изображения</h4>
+            <div className="editor-actions">
+              <button
+                type="button"
+                onClick={onRegenerateImage}
+                disabled={regenerateImageLoading || !(editedText || "").trim()}
+              >
+                {regenerateImageLoading ? "Генерируем изображение..." : "Перегенерировать изображение"}
+              </button>
+            </div>
+          </div>
+          <textarea
+            className="generated-editor"
+            value={editedImagePrompt}
+            onChange={(e) => onEditImagePrompt(e.target.value)}
+            rows={5}
+            placeholder="Можно оставить пустым: тогда промпт соберётся автоматически из текста поста"
+          />
+          {regenerateImageError ? <p className="error">{regenerateImageError}</p> : null}
         </section>
       ) : null}
 
@@ -387,8 +429,14 @@ export default function App() {
   const [analyzeResult, setAnalyzeResult] = useState(null);
   const [generateResult, setGenerateResult] = useState(null);
   const [editedGeneratedText, setEditedGeneratedText] = useState("");
+  const [editedImagePrompt, setEditedImagePrompt] = useState("");
   const [analyzeError, setAnalyzeError] = useState("");
   const [generateError, setGenerateError] = useState("");
+  const [publishEditedLoading, setPublishEditedLoading] = useState(false);
+  const [publishEditedError, setPublishEditedError] = useState("");
+  const [publishEditedSuccess, setPublishEditedSuccess] = useState("");
+  const [regenerateImageLoading, setRegenerateImageLoading] = useState(false);
+  const [regenerateImageError, setRegenerateImageError] = useState("");
 
   const languageOptions = [
     { value: "ru", label: "Русский" },
@@ -432,6 +480,9 @@ export default function App() {
   async function onGenerateSubmit(event) {
     event.preventDefault();
     setGenerateError("");
+    setPublishEditedError("");
+    setPublishEditedSuccess("");
+    setRegenerateImageError("");
     setGenerateLoading(true);
     try {
       const payload = {
@@ -443,10 +494,77 @@ export default function App() {
       const data = await postJson("/vk/posts/generate", payload);
       setGenerateResult(data);
       setEditedGeneratedText(data?.text || "");
+      setEditedImagePrompt(data?.image_prompt || "");
     } catch (error) {
       setGenerateError(error.message || "Ошибка генерации");
     } finally {
       setGenerateLoading(false);
+    }
+  }
+
+  async function onRegenerateImage() {
+    const postText = (editedGeneratedText || generateResult?.text || "").trim();
+    if (!postText) {
+      setRegenerateImageError("Нет текста поста для генерации изображения.");
+      return;
+    }
+    setRegenerateImageError("");
+    setRegenerateImageLoading(true);
+    try {
+      const data = await postJson("/vk/posts/regenerate-image", {
+        post_text: postText,
+        image_prompt: (editedImagePrompt || "").trim() || null,
+        theme: generateResult?.theme || generateForm.theme || null,
+        tone: generateResult?.tone || generateForm.tone || null,
+        language: generateForm.language || "ru",
+      });
+      setGenerateResult((prev) =>
+        prev
+          ? {
+              ...prev,
+              image_prompt: data.image_prompt,
+              generated_image_base64: data.generated_image_base64,
+              generated_image_mime_type: data.generated_image_mime_type,
+            }
+          : prev,
+      );
+      setEditedImagePrompt(data.image_prompt || "");
+    } catch (error) {
+      setRegenerateImageError(error.message || "Не удалось перегенерировать изображение.");
+    } finally {
+      setRegenerateImageLoading(false);
+    }
+  }
+
+  async function onPublishEditedPost() {
+    const message = (editedGeneratedText || "").trim();
+    if (!message) {
+      setPublishEditedError("Текст пустой, нечего публиковать.");
+      return;
+    }
+
+    setPublishEditedError("");
+    setPublishEditedSuccess("");
+    setPublishEditedLoading(true);
+    try {
+      const result = await postJson("/vk/posts/publish", { message });
+      setGenerateResult((prev) =>
+        prev
+          ? {
+              ...prev,
+              text: message,
+              published: true,
+              post_id: result?.post_id ?? prev.post_id,
+              owner_id: result?.owner_id ?? prev.owner_id,
+              publish_note: prev.publish_note || "Опубликовано вручную после редактирования.",
+            }
+          : prev,
+      );
+      setPublishEditedSuccess("Пост успешно опубликован.");
+    } catch (error) {
+      setPublishEditedError(error.message || "Не удалось опубликовать пост.");
+    } finally {
+      setPublishEditedLoading(false);
     }
   }
 
@@ -611,6 +729,15 @@ export default function App() {
             data={generateResult}
             editedText={editedGeneratedText}
             onEditText={setEditedGeneratedText}
+            editedImagePrompt={editedImagePrompt}
+            onEditImagePrompt={setEditedImagePrompt}
+            onRegenerateImage={onRegenerateImage}
+            regenerateImageLoading={regenerateImageLoading}
+            regenerateImageError={regenerateImageError}
+            onPublishEdited={onPublishEditedPost}
+            publishLoading={publishEditedLoading}
+            publishError={publishEditedError}
+            publishSuccess={publishEditedSuccess}
           />
         </section>
       )}

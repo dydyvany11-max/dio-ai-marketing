@@ -84,11 +84,14 @@ class GigaChatVKClient:
             "medium": "600-900 символов",
             "long": "1000-1500 символов",
         }.get(length, "600-900 символов")
+        length_limits = _post_length_rules(length)
+        min_chars_hint = length_limits["min_chars"]
+        max_chars_hint = length_limits["max_chars"]
         tone_hint = (tone or "").strip() or "нейтральный"
         content_rules = {
             "text": "Сгенерируй обычный пост для соцсети.",
             "story": "Сгенерируй контент для сторис: 3-6 коротких кадров в story_frames и короткий текст-подпись.",
-            "image": "Сгенерируй текст поста и детальный image_prompt (композиция, стиль, настроение, ключевые объекты).",
+            "image": "Сгенерируй полноценный текст поста и детальный image_prompt (композиция, стиль, настроение, ключевые объекты), строго соответствующий этому тексту.",
             "video": "Сгенерируй текст поста и детальный video_script (сцены, хук, CTA).",
         }[requested_type]
         full_prompt = (
@@ -98,6 +101,14 @@ class GigaChatVKClient:
             f"Тон: {tone_hint}.\n"
             f"Тип контента: {requested_type}.\n"
             f"{content_rules}\n"
+            "Текст должен быть ПОЛНОЦЕННЫМ ГОТОВЫМ ПОСТОМ, а не заголовком/подписью.\n"
+            "Структура текста: хук в начале, основная часть с деталями, завершение с понятным выводом или CTA.\n"
+            f"Минимальный размер текста: {min_chars_hint} символов.\n"
+            f"Жесткий максимум текста: {max_chars_hint} символов, превышать нельзя.\n"
+            "Если в запросе пользователя есть конкретные требования (например, добавить анекдот), выполни их явно в тексте.\n"
+            "В поле text пиши только итоговый текст поста для публикации.\n"
+            "Запрещено писать служебные фразы: 'Написал пост', 'Вот пример текста', 'Заголовок:', 'Текст поста:'.\n"
+            "Не объясняй, что ты сделал, и не добавляй комментарии о процессе генерации.\n"
             "Если в контексте есть база знаний, используй ТОЛЬКО фрагменты, которые прямо относятся к теме запроса.\n"
             "Не переноси термины/факты из базы знаний, если их связь с темой неочевидна.\n"
             "Если релевантных фрагментов нет, игнорируй базу знаний и пиши только по запросу пользователя.\n"
@@ -121,7 +132,8 @@ class GigaChatVKClient:
                 "Верни ТОЛЬКО JSON-объект-экземпляр (не JSON-schema) со строгими ключами:\n"
                 "content_type, text, story_frames, image_prompt, video_script.\n"
                 f"content_type должен быть: {requested_type}.\n"
-                "Поле text обязательно и должно быть непустой строкой.\n"
+                f"Поле text обязательно и должно быть непустой строкой в диапазоне {min_chars_hint}-{max_chars_hint} символов.\n"
+                "Поле text должно содержать только финальный текст поста без служебных пояснений и без меток вида 'Заголовок:'/'Текст поста:'.\n"
                 f"Язык: {language}.\n"
                 f"Повторно входные данные:\n{json.dumps(payload, ensure_ascii=False)}"
             )
@@ -141,8 +153,38 @@ class GigaChatVKClient:
                     result = VKGeneratedContent(content_type=requested_type, text=fallback_text)
         if result is None:
             raise ValueError("GigaChat returned JSON without required 'text' field")
+
+        if requested_type in {"text", "image", "video"}:
+            normalized_preview = _cleanup_generated_post_text(
+                _normalize_text_for_response(_strip_emojis(result.text or ""), single_line=True)
+            )
+            if _is_too_short_post(normalized_preview, length):
+                expand_prompt = (
+                    "Исправь и расширь предыдущий черновик до полноценного поста.\n"
+                    "Верни только валидный JSON-объект с ключами: content_type, text, story_frames, image_prompt, video_script.\n"
+                    f"content_type должен быть: {requested_type}.\n"
+                    f"text должен быть в диапазоне {min_chars_hint}-{max_chars_hint} символов и содержать хук, основную часть и завершение.\n"
+                    "В text не используй служебные фразы и метки ('Написал пост', 'Вот пример текста', 'Заголовок:', 'Текст поста:').\n"
+                    "Сохрани смысл исходного запроса пользователя и все явные требования.\n"
+                    f"Язык: {language}.\n\n"
+                    f"Входные данные:\n{json.dumps(payload, ensure_ascii=False)}\n\n"
+                    f"Текущий короткий черновик:\n{json.dumps(result.model_dump(), ensure_ascii=False)}"
+                )
+                expanded_content = self._chat(expand_prompt)
+                try:
+                    expanded_json = self._extract_json(expanded_content)
+                    expanded_result = self._parse_generated_content(expanded_json, requested_type)
+                    if expanded_result is not None:
+                        result = expanded_result
+                except Exception:
+                    pass
+
         result.content_type = requested_type
-        result.text = _normalize_text_for_response(_strip_emojis(result.text or ""), single_line=True)
+        result.text = _cleanup_generated_post_text(
+            _normalize_text_for_response(_strip_emojis(result.text or ""), single_line=True)
+        )
+        if requested_type in {"text", "image", "video"} and _is_too_long_post(result.text, length):
+            result.text = _shrink_post_to_max_length(result.text, max_chars_hint)
         result.story_frames = [
             _normalize_text_for_response(_strip_emojis(frame), single_line=True)
             for frame in (result.story_frames or [])
@@ -189,6 +231,49 @@ class GigaChatVKClient:
             tone=tone,
             knowledge_base=knowledge_base,
         )
+
+    def build_image_prompt_from_post(
+        self,
+        *,
+        post_text: str,
+        language: str = "ru",
+        theme: str | None = None,
+        tone: str | None = None,
+        fallback_prompt: str = "",
+    ) -> str:
+        normalized_post = _normalize_text_for_response(_strip_emojis(post_text or ""), single_line=True)
+        if not normalized_post:
+            return (fallback_prompt or "").strip()
+        compact_post = normalized_post[:1300]
+        tone_hint = (tone or "").strip() or "нейтральный"
+
+        full_prompt = (
+            "Ты промпт-инженер для генерации изображений.\n"
+            "На входе текст поста для соцсети.\n"
+            "Верни только одну строку готового image prompt, без JSON, без markdown, без комментариев.\n"
+            "Требования:\n"
+            "- не копируй пост дословно;\n"
+            "- извлеки визуальную сцену строго из фактов и образов этого поста, без выдуманных сущностей;\n"
+            "- опиши композицию, персонажей/объекты, окружение, свет и стиль;\n"
+            "- обязательно отрази ключевые элементы текста (компания/контекст, персонажи, действие);\n"
+            "- длина 35-80 слов;\n"
+            "- без префиксов 'Промпт:' и 'image_prompt:'.\n"
+            "- если есть юмористический эпизод, сохрани его визуально, но без карикатурной деградации качества.\n"
+            f"Язык: {language}. Тон: {tone_hint}.\n"
+            f"Тема: {(theme or '').strip() or 'не задана'}.\n\n"
+            f"Текст поста:\n{compact_post}"
+        )
+        content = self._chat(full_prompt)
+        candidate = _normalize_text_for_response(_strip_emojis(content or ""), single_line=True)
+        candidate = re.sub(r"(?i)^(image[_\\s-]?prompt|промпт)\\s*:\\s*", "", candidate).strip()
+        if not candidate:
+            return (fallback_prompt or "").strip()
+        words = [w for w in candidate.split() if w.strip()]
+        if len(words) < 8:
+            return (fallback_prompt or "").strip()
+        if len(candidate) > 700:
+            candidate = candidate[:700].rsplit(" ", 1)[0].strip()
+        return candidate
 
     def analyze_group(self, payload: dict[str, Any], language: str = "ru") -> VKGroupInsights:
         schema = VKGroupInsights.model_json_schema()
@@ -714,3 +799,78 @@ def _normalize_text_for_response(text: str, *, single_line: bool) -> str:
     if single_line:
         return " ".join(lines)
     return "\n\n".join(lines)
+
+
+def _cleanup_generated_post_text(text: str) -> str:
+    value = str(text or "").strip()
+    if not value:
+        return ""
+
+    value = value.replace("**", "")
+
+    # Prefer pure post body if model returned editorial wrappers.
+    body_marker = re.search(r"(?i)текст\s+поста\s*:\s*", value)
+    if body_marker:
+        value = value[body_marker.end():].strip()
+
+    value = re.sub(r"(?i)^вот\s+пример\s+текста\s*:\s*", "", value).strip()
+    value = re.sub(r"(?i)^пример\s+текста\s*:\s*", "", value).strip()
+    value = re.sub(r"(?i)^заголовок\s*:\s*", "", value).strip()
+    value = re.sub(r"(?i)^текст\s+поста\s*:\s*", "", value).strip()
+    value = re.sub(r"(?i)^написал[аи]?\s+пост[^.!?]*[.!?]\s*", "", value).strip()
+
+    return " ".join(value.split())
+
+
+def _is_too_short_post(text: str, length: str) -> bool:
+    content = (text or "").strip()
+    if not content:
+        return True
+    words = [w for w in content.split() if w.strip()]
+    char_count = len(content)
+    rule = _post_length_rules(length)
+    return char_count < rule["min_chars"] or len(words) < rule["min_words"]
+
+
+def _is_too_long_post(text: str, length: str) -> bool:
+    content = (text or "").strip()
+    if not content:
+        return False
+    rule = _post_length_rules(length)
+    return len(content) > rule["max_chars"]
+
+
+def _post_length_rules(length: str) -> dict[str, int]:
+    rules = {
+        "short": {"min_chars": 220, "max_chars": 540, "min_words": 35},
+        "medium": {"min_chars": 500, "max_chars": 1000, "min_words": 75},
+        "long": {"min_chars": 900, "max_chars": 1800, "min_words": 130},
+    }
+    return rules.get((length or "").strip().lower(), rules["medium"])
+
+
+def _shrink_post_to_max_length(text: str, max_chars: int) -> str:
+    content = " ".join(str(text or "").split()).strip()
+    if not content or len(content) <= max_chars:
+        return content
+
+    sentences = re.split(r"(?<=[.!?])\s+", content)
+    picked: list[str] = []
+    total = 0
+    for sentence in sentences:
+        piece = sentence.strip()
+        if not piece:
+            continue
+        add_len = len(piece) + (1 if picked else 0)
+        if total + add_len > max_chars:
+            break
+        picked.append(piece)
+        total += add_len
+
+    if picked:
+        trimmed = " ".join(picked).strip()
+        if len(trimmed) >= int(max_chars * 0.7):
+            return trimmed
+
+    hard_trim = content[:max_chars].rsplit(" ", 1)[0].strip()
+    return hard_trim if hard_trim else content[:max_chars].strip()

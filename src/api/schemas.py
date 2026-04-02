@@ -650,6 +650,20 @@ class VKAIPostResponse(BaseModel):
     )
 
 
+class VKRegenerateImageRequest(BaseModel):
+    post_text: str = Field(description="Generated/edited post text used as visual source")
+    image_prompt: str | None = Field(default=None, description="Optional manual image prompt override")
+    theme: str | None = Field(default=None, description="Theme hint")
+    tone: str | None = Field(default=None, description="Tone hint")
+    language: str = Field(default="ru", description="Output language")
+
+
+class VKRegenerateImageResponse(BaseModel):
+    image_prompt: str = Field(description="Final prompt used for image generation")
+    generated_image_base64: str = Field(description="Generated image as base64 string")
+    generated_image_mime_type: str = Field(description="MIME type of generated image")
+
+
 class VKRAGChunkUsedResponse(BaseModel):
     title: str | None = Field(default=None, description="Document/chunk title")
     filename: str | None = Field(default=None, description="Source filename if available")

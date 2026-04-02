@@ -25,6 +25,8 @@ from src.api.schemas import (
     VKGroupMetricsResponse,
     VKPublishRequest,
     VKPublishResponse,
+    VKRegenerateImageRequest,
+    VKRegenerateImageResponse,
     VKRAGChunkUsedResponse,
 )
 from src.api.services.errors import VKAuthorizationError, VKOperationError
@@ -212,6 +214,34 @@ def _public_post_id_to_int(post_id: str) -> int:
         return 0
 
 
+def _build_image_prompt_from_generated_text(
+    *,
+    generated_text: str,
+    fallback_prompt: str,
+    theme: str | None,
+    tone: str | None,
+    ai_image_prompt: str | None,
+) -> str:
+    # Compact fallback if AI image-prompt builder is unavailable.
+    # We still derive this from generated post text, but keep it concise.
+    text = (generated_text or "").strip()
+    if text:
+        compact = " ".join(text.split())
+        sentences = re.split(r"(?<=[.!?])\s+", compact)
+        core = " ".join(sentences[:2]).strip()[:360]
+        parts = [f"Сцена по мотивам поста: {core}"]
+        if theme and str(theme).strip():
+            parts.append(f"Тема: {str(theme).strip()}")
+        if tone and str(tone).strip():
+            parts.append(f"Тон: {str(tone).strip()}")
+        if ai_image_prompt and str(ai_image_prompt).strip():
+            parts.append(f"Доп.детали: {str(ai_image_prompt).strip()[:220]}")
+        return ". ".join(parts)
+    if ai_image_prompt and str(ai_image_prompt).strip():
+        return str(ai_image_prompt).strip()
+    return (fallback_prompt or "").strip()
+
+
 @router.get("/browser/status", summary="VK browser profile status")
 def vk_browser_status():
     profile_dir = vk_browser_profile_dir()
@@ -377,9 +407,25 @@ def vk_generate_post(
     image_bytes: bytes | None = None
     image_mime_type: str | None = None
 
+    resolved_image_prompt: str | None = generated.image_prompt
+
     if generated.content_type == "image":
         try:
-            image_prompt = (generated.image_prompt or "").strip() or text or payload.prompt
+            fallback_image_prompt = _build_image_prompt_from_generated_text(
+                generated_text=text,
+                fallback_prompt=payload.prompt,
+                theme=payload.theme,
+                tone=payload.tone,
+                ai_image_prompt=generated.image_prompt,
+            )
+            image_prompt = client.build_image_prompt_from_post(
+                post_text=text,
+                language=payload.language,
+                theme=payload.theme,
+                tone=payload.tone,
+                fallback_prompt=fallback_image_prompt,
+            )
+            resolved_image_prompt = image_prompt
             image_bytes, image_mime_type, _ = client.generate_image(
                 prompt=image_prompt,
                 language=payload.language,
@@ -514,7 +560,7 @@ def vk_generate_post(
             theme=payload.theme,
             tone=payload.tone,
             story_frames=generated.story_frames,
-            image_prompt=generated.image_prompt,
+            image_prompt=resolved_image_prompt,
             video_script=generated.video_script,
             generated_image_base64=generated_image_base64,
             generated_image_mime_type=generated_image_mime_type,
@@ -542,7 +588,7 @@ def vk_generate_post(
         theme=payload.theme,
         tone=payload.tone,
         story_frames=generated.story_frames,
-        image_prompt=generated.image_prompt,
+        image_prompt=resolved_image_prompt,
         video_script=generated.video_script,
         generated_image_base64=generated_image_base64,
         generated_image_mime_type=generated_image_mime_type,
@@ -550,6 +596,54 @@ def vk_generate_post(
         knowledge_base_name=kb_name,
         knowledge_chunks_used=len(kb_snippets) if kb_snippets else None,
         knowledge_chunks=kb_chunks_payload,
+    )
+
+
+@router.post(
+    "/posts/regenerate-image",
+    response_model=VKRegenerateImageResponse,
+    summary="Regenerate image for existing generated/edited post text",
+)
+def vk_regenerate_image(payload: VKRegenerateImageRequest):
+    if not is_gigachat_configured():
+        raise HTTPException(status_code=400, detail="GigaChat is not configured")
+
+    client = GigaChatVKClient(load_gigachat_settings())
+    post_text = (payload.post_text or "").strip()
+    if not post_text:
+        raise HTTPException(status_code=400, detail="post_text is required")
+
+    manual_prompt = (payload.image_prompt or "").strip()
+    try:
+        resolved_prompt = (
+            manual_prompt
+            or client.build_image_prompt_from_post(
+                post_text=post_text,
+                language=payload.language,
+                theme=payload.theme,
+                tone=payload.tone,
+                fallback_prompt=post_text[:240],
+            )
+        ).strip()
+        if not resolved_prompt:
+            raise HTTPException(status_code=400, detail="Could not build image prompt from post text")
+
+        image_bytes, image_mime_type, _ = client.generate_image(
+            prompt=resolved_prompt,
+            language=payload.language,
+            theme=payload.theme,
+            tone=payload.tone,
+            knowledge_base=None,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Image regeneration failed: {exc}") from exc
+
+    return VKRegenerateImageResponse(
+        image_prompt=resolved_prompt,
+        generated_image_base64=base64.b64encode(image_bytes).decode("ascii"),
+        generated_image_mime_type=image_mime_type,
     )
 
 
