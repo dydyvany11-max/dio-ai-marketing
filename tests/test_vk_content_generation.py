@@ -63,11 +63,12 @@ def test_generate_image_uses_attachment_from_chat():
     }
     client._download_file_content = lambda _file_id: (b"image-bytes", "image/jpeg")
 
-    data, mime, file_id = client.generate_image(prompt="pink cat")
+    data, mime, file_id, refs_used = client.generate_image(prompt="pink cat")
 
     assert data == b"image-bytes"
     assert mime == "image/jpeg"
     assert file_id == "file-12345678901234567890"
+    assert refs_used is False
 
 
 def test_generate_video_uses_attachment_from_chat():
@@ -84,8 +85,66 @@ def test_generate_video_uses_attachment_from_chat():
     }
     client._download_file_content = lambda _file_id: (b"video-bytes", "video/mp4")
 
-    data, mime, file_id = client.generate_video(prompt="short ad video")
+    data, mime, file_id, refs_used = client.generate_video(prompt="short ad video")
 
     assert data == b"video-bytes"
     assert mime == "video/mp4"
     assert file_id == "video-12345678901234567890"
+    assert refs_used is False
+
+
+def test_generate_image_reports_reference_usage_when_refs_are_sent():
+    client = GigaChatVKClient(_fake_settings())
+    client._build_reference_attachment_messages = lambda _refs: [{"role": "user", "content": "ref"}]
+    client._chat_raw = lambda _payload: {
+        "choices": [
+            {
+                "message": {
+                    "attachments": ["file-12345678901234567890"],
+                    "content": "",
+                }
+            }
+        ]
+    }
+    client._download_file_content = lambda _file_id: (b"image-bytes", "image/jpeg")
+
+    data, mime, file_id, refs_used = client.generate_image(
+        prompt="pink cat",
+        reference_images=[{"bytes": b"x", "filename": "x.png", "mime_type": "image/png"}],
+    )
+
+    assert data == b"image-bytes"
+    assert mime == "image/jpeg"
+    assert file_id == "file-12345678901234567890"
+    assert refs_used is True
+
+
+def test_generate_image_strict_mode_fails_when_reference_upload_not_built():
+    client = GigaChatVKClient(_fake_settings())
+    client._build_reference_attachment_messages = lambda _refs: []
+
+    try:
+        client.generate_image(
+            prompt="pink cat",
+            reference_images=[{"bytes": b"x", "filename": "x.png", "mime_type": "image/png"}],
+            allow_reference_fallback=False,
+        )
+        assert False, "Expected strict reference mode to raise ValueError"
+    except ValueError as exc:
+        assert "Failed to attach reference images" in str(exc)
+
+
+def test_generate_image_strict_mode_does_not_silent_fallback_on_chat_error():
+    client = GigaChatVKClient(_fake_settings())
+    client._build_reference_attachment_messages = lambda _refs: [{"role": "user", "content": "ref"}]
+    client._chat_raw = lambda _payload: (_ for _ in ()).throw(ValueError("422 attachment error"))
+
+    try:
+        client.generate_image(
+            prompt="pink cat",
+            reference_images=[{"bytes": b"x", "filename": "x.png", "mime_type": "image/png"}],
+            allow_reference_fallback=False,
+        )
+        assert False, "Expected strict reference mode to raise ValueError"
+    except ValueError as exc:
+        assert "422 attachment error" in str(exc)

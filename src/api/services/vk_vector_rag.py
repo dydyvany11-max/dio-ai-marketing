@@ -159,6 +159,7 @@ class VKVectorRAG:
                     "title": str(meta.get("title") or meta.get("filename") or "Document"),
                     "source_type": meta.get("source_type"),
                     "filename": meta.get("filename"),
+                    "asset_path": meta.get("asset_path"),
                     "snippet": snippet,
                     "score": score,
                     "matched_terms": sorted(list(overlap))[:12],
@@ -314,6 +315,7 @@ class VKVectorRAG:
                                 "title": title,
                                 "filename": doc.get("filename"),
                                 "source_type": doc.get("source_type"),
+                                "asset_path": doc.get("asset_path"),
                             }
                         ),
                     }

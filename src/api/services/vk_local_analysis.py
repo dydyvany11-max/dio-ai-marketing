@@ -3,104 +3,6 @@ from __future__ import annotations
 import re
 from collections import Counter
 
-from src.api.services.trends_engine import get_stopwords
-
-STOPWORDS = {word.lower() for word in get_stopwords()}
-_EXTRA_STOPWORDS = {
-    # Generic UI / crawl noise
-    "vk",
-    "club",
-    "public",
-    "group",
-    "community",
-    "post",
-    "posts",
-    "wall",
-    "page",
-    "today",
-    "yesterday",
-    "this",
-    "that",
-    "with",
-    "from",
-    "comment",
-    "comments",
-    "leave",
-    "reply",
-    "replies",
-    "view",
-    "views",
-    "oldest",
-    "unavailable",
-    "because",
-    "slide",
-    "next",
-    "previous",
-    "swipe",
-    # Russian generic / weak words
-    "онлайн",
-    "инфо",
-    "компания",
-    "компании",
-    "официальный",
-    "партнер",
-    "партнёр",
-    "услуга",
-    "услуги",
-    "эксперт",
-    "эксперты",
-    "документ",
-    "документы",
-    "версия",
-    "версии",
-    "пусть",
-    "необходимо",
-    "для",
-    "это",
-    "также",
-    "уже",
-    "еще",
-    "ещё",
-    "просто",
-    "очень",
-    "следующий",
-    "слайд",
-    "предыдущий",
-    "листайте",
-    "свайп",
-    # Frequent social slugs/noise
-    "ffmvideos",
-    "ffmnews",
-}
-_ALL_STOPWORDS = STOPWORDS | _EXTRA_STOPWORDS
-_MONTH_WORDS = {
-    "января",
-    "февраля",
-    "марта",
-    "апреля",
-    "мая",
-    "июня",
-    "июля",
-    "августа",
-    "сентября",
-    "октября",
-    "ноября",
-    "декабря",
-    "january",
-    "february",
-    "march",
-    "april",
-    "may",
-    "june",
-    "july",
-    "august",
-    "september",
-    "october",
-    "november",
-    "december",
-}
-
-
 def build_local_vk_insights(group_name: str, screen_name: str, posts: list[dict], metrics: dict) -> tuple[dict, dict]:
     return build_local_vk_insights_with_context(
         group_name=group_name,
@@ -288,8 +190,6 @@ def _is_semantic_token(token: str, banned_terms: set[str]) -> bool:
     if len(token) < 3:
         return False
     if token in banned_terms:
-        return False
-    if token in _ALL_STOPWORDS or token in _MONTH_WORDS:
         return False
     if token.isdigit():
         return False

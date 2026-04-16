@@ -500,6 +500,17 @@ class VKKnowledgeBaseUploadRequest(BaseModel):
     language: str = Field(default="ru", description="Knowledge base language")
 
 
+class VKKnowledgeUrlUploadRequest(BaseModel):
+
+    url: str = Field(description="Public URL to ingest into knowledge base")
+
+    name: str | None = Field(default=None, description="Knowledge base title (optional)")
+
+    title: str | None = Field(default=None, description="Document title override (optional)")
+
+    language: str = Field(default="ru", description="Knowledge base language")
+
+
 class VKKnowledgeBaseItemResponse(BaseModel):
 
     id: str = Field(description="Knowledge base id")
@@ -562,6 +573,19 @@ class VKKnowledgeDeleteFileResponse(BaseModel):
     remaining_documents: int = Field(description="How many documents left in the KB")
 
 
+class VKAIUsageResponse(BaseModel):
+    provider: str = Field(description="AI provider that produced usage stats")
+    model: str | None = Field(default=None, description="Model name/uri")
+    input_tokens: int = Field(default=0, description="Prompt/input tokens")
+    output_tokens: int = Field(default=0, description="Completion/output tokens")
+    total_tokens: int = Field(default=0, description="Total tokens")
+    estimated_cost: float | None = Field(
+        default=None,
+        description="Estimated generation cost based on configured per-1k token prices",
+    )
+    currency: str | None = Field(default=None, description="Currency for estimated_cost")
+
+
 class VKAIPostRequest(BaseModel):
 
     prompt: str = Field(description="Prompt for post generation")
@@ -583,6 +607,15 @@ class VKAIPostRequest(BaseModel):
     )
 
     language: str = Field(default="ru", description="Output language")
+    ai_provider: str | None = Field(
+        default="auto",
+        description="AI provider: auto, gigachat, yandex",
+    )
+
+    use_kb_image_references: bool = Field(
+        default=True,
+        description="If true and content_type=image, enrich image prompt with relevant image notes from KB",
+    )
 
 
 class VKAIPostResponse(BaseModel):
@@ -635,6 +668,16 @@ class VKAIPostResponse(BaseModel):
         description="MIME type of generated image",
     )
 
+    image_reference_files_attached: int = Field(
+        default=0,
+        description="How many KB image reference files were attached for image generation",
+    )
+
+    ai_usage: VKAIUsageResponse | None = Field(
+        default=None,
+        description="Token usage and estimated cost for the generation request",
+    )
+
     knowledge_base_id: str | None = Field(default=None, description="Used knowledge base id")
 
     knowledge_base_name: str | None = Field(default=None, description="Used knowledge base title")
@@ -649,6 +692,8 @@ class VKAIPostResponse(BaseModel):
         description="Which KB chunks were used for generation and why",
     )
 
+    history_id: int | None = Field(default=None, description="Saved content generation history item id")
+
 
 class VKRegenerateImageRequest(BaseModel):
     post_text: str = Field(description="Generated/edited post text used as visual source")
@@ -656,12 +701,83 @@ class VKRegenerateImageRequest(BaseModel):
     theme: str | None = Field(default=None, description="Theme hint")
     tone: str | None = Field(default=None, description="Tone hint")
     language: str = Field(default="ru", description="Output language")
+    ai_provider: str | None = Field(
+        default="auto",
+        description="AI provider for image prompt generation: auto, gigachat, yandex",
+    )
+    use_kb_image_references: bool = Field(
+        default=True,
+        description="If true, use relevant image notes from active KB as visual references",
+    )
 
 
 class VKRegenerateImageResponse(BaseModel):
     image_prompt: str = Field(description="Final prompt used for image generation")
     generated_image_base64: str = Field(description="Generated image as base64 string")
     generated_image_mime_type: str = Field(description="MIME type of generated image")
+    knowledge_chunks_used: int = Field(default=0, description="How many KB chunks were used during image regeneration")
+    knowledge_chunks: list["VKRAGChunkUsedResponse"] = Field(
+        default_factory=list,
+        description="KB chunks used during image regeneration",
+    )
+    image_reference_files_attached: int = Field(
+        default=0,
+        description="How many image reference files were attached to the model request",
+    )
+    ai_usage: VKAIUsageResponse | None = Field(
+        default=None,
+        description="Token usage and estimated cost for image regeneration",
+    )
+
+
+class VKPostGenerateHistoryItemSummary(BaseModel):
+    id: int
+    created_at: str
+    prompt: str | None = None
+    theme: str | None = None
+    tone: str | None = None
+    content_type: str | None = None
+    publish_requested: bool = False
+    language: str | None = None
+    length: str | None = None
+    published: bool = False
+    post_id: int | None = None
+    owner_id: int | None = None
+    char_count: int | None = None
+    word_count: int | None = None
+    text_preview: str | None = None
+
+
+class VKPostGenerateHistoryListResponse(BaseModel):
+    items: list[VKPostGenerateHistoryItemSummary]
+
+
+class VKPostGenerateHistoryClearResponse(BaseModel):
+    cleared: int = Field(description="How many history rows were removed")
+
+
+class VKPostGenerateHistoryDeleteItemResponse(BaseModel):
+    deleted: bool = Field(default=True, description="Was history item deleted")
+    history_id: int = Field(description="Deleted history item id")
+
+
+class VKPostGenerateHistoryItemResponse(BaseModel):
+    id: int
+    created_at: str
+    prompt: str | None = None
+    theme: str | None = None
+    tone: str | None = None
+    content_type: str | None = None
+    publish_requested: bool = False
+    language: str | None = None
+    length: str | None = None
+    published: bool = False
+    post_id: int | None = None
+    owner_id: int | None = None
+    char_count: int | None = None
+    word_count: int | None = None
+    text_preview: str | None = None
+    report: VKAIPostResponse
 
 
 class VKRAGChunkUsedResponse(BaseModel):
@@ -681,6 +797,10 @@ class VKGroupAnalyzeRequest(BaseModel):
     post_limit: int = Field(default=50, ge=1, le=100, description="How many posts to analyze")
 
     language: str = Field(default="ru", description="Output language")
+    ai_provider: str | None = Field(
+        default="auto",
+        description="AI provider: auto, gigachat, yandex",
+    )
 
 
 class VKGroupAIInsights(BaseModel):
@@ -802,6 +922,77 @@ class VKGroupAnalyzeResponse(BaseModel):
     recommendations: list[VKAnalyticsRecommendationResponse]
 
     ai_status: GigaChatStatusResponse
+    ai_usage: VKAIUsageResponse | None = Field(
+        default=None,
+        description="Token usage and estimated cost for analysis generation",
+    )
+
+    history_id: int | None = Field(default=None, description="Saved analysis history item id")
+
+
+class VKGroupAnalyzeHistoryItemSummary(BaseModel):
+    id: int
+    created_at: str
+    source_input: str | None = None
+    post_limit: int | None = None
+    language: str | None = None
+    group_id: int | None = None
+    group_name: str | None = None
+    screen_name: str | None = None
+    members_count: int | None = None
+    total_posts_analyzed: int | None = None
+    average_likes: int | None = None
+    average_comments: int | None = None
+    ai_summary: str | None = None
+
+
+class VKGroupAnalyzeHistoryListResponse(BaseModel):
+    items: list[VKGroupAnalyzeHistoryItemSummary]
+
+
+class VKGroupAnalyzeHistoryClearResponse(BaseModel):
+    cleared: int = Field(description="How many history rows were removed")
+
+
+class VKGroupAnalyzeHistoryDeleteItemResponse(BaseModel):
+    deleted: bool = Field(default=True, description="Was history item deleted")
+    history_id: int = Field(description="Deleted history item id")
+
+
+class VKRecommendationsChatMessage(BaseModel):
+    role: str = Field(description="Message role: user or assistant")
+    text: str = Field(description="Message text")
+    created_at: str | None = Field(default=None, description="UTC ISO datetime")
+
+
+class VKGroupAnalyzeHistoryItemResponse(BaseModel):
+    id: int
+    created_at: str
+    source_input: str | None = None
+    post_limit: int | None = None
+    language: str | None = None
+    group_id: int | None = None
+    group_name: str | None = None
+    screen_name: str | None = None
+    members_count: int | None = None
+    total_posts_analyzed: int | None = None
+    average_likes: int | None = None
+    average_comments: int | None = None
+    ai_summary: str | None = None
+    chat_messages: list[VKRecommendationsChatMessage] = Field(default_factory=list)
+    report: VKGroupAnalyzeResponse
+
+
+class VKRecommendationsChatRequest(BaseModel):
+    report: dict = Field(description="VK group analysis report payload")
+    message: str = Field(description="User message/question for recommendation assistant")
+    language: str = Field(default="ru", description="Response language")
+    history_id: int | None = Field(default=None, description="Analysis history id to persist chat")
+
+
+class VKRecommendationsChatResponse(BaseModel):
+    answer: str = Field(description="Detailed recommendation assistant answer")
+    chat_messages: list[VKRecommendationsChatMessage] = Field(default_factory=list)
 
 
 class TrendItem(BaseModel):
@@ -958,6 +1149,10 @@ class TrendAIAnalyzeRequest(BaseModel):
     article_limit: int = Field(default=400, ge=50, le=5000, description="How many recent articles to use")
 
     language: str = Field(default="ru", description="Output language")
+    ai_provider: str | None = Field(
+        default="auto",
+        description="AI provider: auto, gigachat, yandex",
+    )
 
 
 class TrendAIAnalyzeResponse(BaseModel):

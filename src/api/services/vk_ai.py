@@ -374,6 +374,12 @@ class GigaChatVKClient:
         return normalized
 
     def _chat(self, prompt: str) -> str:
+
+        print("\n" + "="*50)
+        print("🚀 ОТПРАВКА ПРОМПТА К GIGACHAT:")
+        print(prompt)
+        print("="*50 + "\n")
+
         payload = {
             "model": self._settings.model,
             "messages": [{"role": "user", "content": prompt}],
@@ -382,6 +388,11 @@ class GigaChatVKClient:
         data = self._chat_raw(payload)
         message = data.get("choices", [{}])[0].get("message", {})
         content = message.get("content")
+
+        print("\n" + "✨ ОТВЕТ ОТ НЕЙРОНКИ:")
+        print(content)
+        print("="*50 + "\n")
+        
         if isinstance(content, str):
             return content
         if isinstance(content, list):

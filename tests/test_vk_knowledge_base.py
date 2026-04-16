@@ -216,3 +216,73 @@ def test_vk_knowledge_store_delete_document_by_filename(tmp_path: Path):
         knowledge_base_id=base["id"],
     )
     assert result["knowledge_base_id"] == base["id"]
+
+
+def test_vk_knowledge_store_add_url_document(tmp_path: Path):
+    store = VKKnowledgeStore(path=tmp_path / "vk_kb.db")
+    base = store.upsert(name="Docs", content="base", language="ru")
+
+    updated = store.add_file(
+        filename="url__example.com__index",
+        title="Example page",
+        content="Automation and ERP best practices.",
+        source_type="url",
+        mime_type="text/html",
+        language="ru",
+        knowledge_base_id=base["id"],
+    )
+
+    docs = updated.get("documents") or []
+    url_docs = [doc for doc in docs if doc.get("source_type") == "url"]
+    assert url_docs
+    assert url_docs[0].get("title") == "Example page"
+
+
+def test_vk_knowledge_store_add_file_does_not_rename_existing_base_when_name_omitted(tmp_path: Path):
+    store = VKKnowledgeStore(path=tmp_path / "vk_kb.db")
+    base = store.upsert(name="Main KB", content="base", language="ru")
+
+    updated = store.add_file(
+        filename="photo_guide.png",
+        content="Изображение: бренд-гайд",
+        source_type="image",
+        language="ru",
+        knowledge_base_id=base["id"],
+    )
+
+    assert updated["id"] == base["id"]
+    assert updated["name"] == "Main KB"
+
+
+def test_vk_knowledge_store_add_file_without_base_uses_default_name(tmp_path: Path):
+    store = VKKnowledgeStore(path=tmp_path / "vk_kb.db")
+
+    created = store.add_file(
+        filename="photo_guide.png",
+        content="Изображение: бренд-гайд",
+        source_type="image",
+        language="ru",
+    )
+
+    assert created["name"] == "Основная база знаний"
+
+
+def test_vk_knowledge_store_persists_asset_path_for_image_docs(tmp_path: Path):
+    store = VKKnowledgeStore(path=tmp_path / "vk_kb.db")
+    base = store.upsert(name="Main KB", content="base", language="ru")
+    asset_file = tmp_path / "ref.png"
+    asset_file.write_bytes(b"fake-image")
+
+    updated = store.add_file(
+        filename="ref.png",
+        content="Описание изображения: желтая футболка 1С",
+        source_type="image",
+        asset_path=str(asset_file.resolve()),
+        language="ru",
+        knowledge_base_id=base["id"],
+    )
+
+    docs = updated.get("documents") or []
+    image_docs = [doc for doc in docs if doc.get("source_type") == "image"]
+    assert image_docs
+    assert str(image_docs[0].get("asset_path") or "") == str(asset_file.resolve())

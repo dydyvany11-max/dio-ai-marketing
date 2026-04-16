@@ -11,6 +11,7 @@ from src.api.services.vk_public import (
     PublicVKSearchResult,
 )
 from src.api.routers.vk import _is_query_term, _is_query_word, _search_vk_competitors
+from src.api.services.vk_analysis_helpers import _finalize_search_tags_for_vk_ru
 
 
 def test_local_vk_insights_filters_ui_noise_and_builds_topics():
@@ -68,12 +69,11 @@ def test_extract_post_metrics_from_html_fallback_counts():
     assert metrics["comments"] in {20, 3}
 
 
-def test_query_term_filters_weak_words_and_month_noise():
+def test_query_term_basic_validation_without_hardcoded_weak_words():
     assert _is_query_word("cs2")
-    assert _is_query_term("cs2 новости")
-    assert not _is_query_word("также")
-    assert not _is_query_term("также")
-    assert not _is_query_term("марта vk")
+    assert _is_query_term("cs2 updates")
+    assert _is_query_word("daily")
+    assert _is_query_term("daily")
 
 
 def test_local_vk_insights_drop_media_slug_noise_terms():
@@ -334,8 +334,67 @@ def test_search_public_groups_http_parses_vk_links(monkeypatch):
     assert "fastfoodmusic" in names
 
 
-def test_query_word_rejects_internet_generic():
-    assert not _is_query_word("internet")
+def test_query_word_accepts_internet_when_filters_removed():
+    assert _is_query_word("internet")
+
+
+def test_finalize_search_tags_for_vk_ru_prefers_russian_terms():
+    tags = [
+        "consulting",
+        "business services",
+        "erp implementation",
+        "crm",
+        "support",
+    ]
+
+    result = _finalize_search_tags_for_vk_ru(
+        tags,
+        group_name="ДИО-Консалт",
+        group_description="Официальный партнер 1С. Внедрение ERP и CRM для бизнеса.",
+        group_activity="Консалтинг",
+        source_posts=[],
+        limit=8,
+    )
+
+    assert result
+    assert all("consulting" not in term for term in result)
+    assert all("business" not in term for term in result)
+    assert any("консалт" in term for term in result)
+    assert any("1с" in term or "erp" in term for term in result)
+    assert all(any(("а" <= ch <= "я") or ch == "ё" for ch in term.lower()) for term in result)
+
+
+def test_finalize_search_tags_for_vk_ru_backfills_from_context_when_empty():
+    result = _finalize_search_tags_for_vk_ru(
+        [],
+        group_name="ДИО-Консалт",
+        group_description="Внедрение 1С ERP, CRM, автоматизация учета и бизнес-процессов.",
+        group_activity="IT consulting",
+        source_posts=[],
+        limit=8,
+    )
+
+    assert len(result) >= 4
+    assert any("1с" in term for term in result)
+    assert any("внедрение" in term or "автоматизация" in term for term in result)
+
+
+def test_finalize_search_tags_for_vk_ru_cleans_awkward_mixed_forms():
+    result = _finalize_search_tags_for_vk_ru(
+        ["системы crm", "crm systems", "консалтинг erp", "erp консалтинг", "it consulting"],
+        group_name="ДИО-Консалт",
+        group_description="Внедрение ERP и CRM, автоматизация учета и сопровождение 1С.",
+        group_activity="Консалтинг",
+        source_posts=[],
+        limit=8,
+    )
+
+    assert result
+    assert "системы crm" not in result
+    assert "консалтинг erp" not in result
+    assert "erp консалтинг" not in result
+    assert any(term == "crm системы" for term in result)
+    assert any(term == "внедрение erp" for term in result)
 
 
 def test_competitor_search_fallback_by_source_name(monkeypatch):

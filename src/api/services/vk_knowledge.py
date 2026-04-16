@@ -18,115 +18,9 @@ from src.api.services.vk_vector_rag import VKVectorRAG
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
-
-_GENERIC_STOPWORDS = {
-    "and",
-    "the",
-    "for",
-    "with",
-    "this",
-    "that",
-    "from",
-    "into",
-    "about",
-    "your",
-    "you",
-    "are",
-    "\u043a\u0430\u043a",
-    "\u0434\u043b\u044f",
-    "\u044d\u0442\u043e",
-    "\u0447\u0442\u043e",
-    "\u0438\u043b\u0438",
-    "\u043f\u0440\u0438",
-    "\u043f\u043e\u0434",
-    "\u043d\u0430\u0434",
-    "\u0431\u0435\u0437",
-    "\u0432\u0441\u0435",
-    "\u0432\u0441\u0435\u0445",
-    "\u0435\u0441\u043b\u0438",
-    "\u0442\u0430\u043a\u0436\u0435",
-    "\u0447\u0442\u043e\u0431\u044b",
-    "\u0433\u0434\u0435",
-    "\u043a\u043e\u0433\u0434\u0430",
-    "\u043f\u043e\u0441\u043b\u0435",
-    "\u043f\u0435\u0440\u0435\u0434",
-    "\u0447\u0435\u0440\u0435\u0437",
-    "\u0442\u0435\u043c\u0430",
-    "\u0442\u043e\u043d",
-    "\u043a\u043e\u043d\u0442\u0435\u043d\u0442",
-    "\u043f\u043e\u0441\u0442",
-    "\u0442\u0435\u043a\u0441\u0442",
-    "\u0441\u0442\u0438\u043b\u044c",
-    "\u043e\u0444\u0438\u0446\u0438\u0430\u043b\u044c\u043d\u044b\u0439",
-    "\u0440\u0430\u0437\u0433\u043e\u0432\u043e\u0440\u043d\u044b\u0439",
-    "\u0434\u0435\u043b\u043e\u0432\u043e\u0439",
-    "\u0438\u043d\u0441\u0442\u0440\u0443\u043a\u0446\u0438\u044f",
-    "\u0438\u043d\u0441\u0442\u0440\u0443\u043a\u0446",
-    "\u0441\u043b\u043e\u0432\u043e",
-    "\u0441\u043b\u043e\u0432\u0430",
-    "\u0441\u043b\u043e\u0432",
-}
-
-_RU_SUFFIXES = (
-    "\u0438\u044f\u043c\u0438",
-    "\u044f\u043c\u0438",
-    "\u0430\u043c\u0438",
-    "\u043e\u0433\u043e",
-    "\u0435\u043c\u0443",
-    "\u043e\u043c\u0443",
-    "\u0438\u043c\u0438",
-    "\u044b\u043c\u0438",
-    "\u0438\u044f\u0445",
-    "\u0430\u0445",
-    "\u044f\u0445",
-    "\u0438\u044f",
-    "\u044c\u044f",
-    "\u0438\u0435",
-    "\u044b\u0435",
-    "\u0438\u0439",
-    "\u044b\u0439",
-    "\u043e\u0439",
-    "\u0430\u044f",
-    "\u043e\u0435",
-    "\u0435\u0435",
-    "\u0443\u044e",
-    "\u044e\u044e",
-    "\u043e\u0432",
-    "\u0435\u0432",
-    "\u043e\u043c",
-    "\u0435\u043c",
-    "\u0430\u043c",
-    "\u044f\u043c",
-    "\u044b",
-    "\u0438",
-    "\u0430",
-    "\u044f",
-    "\u043e",
-    "\u0435",
-    "\u0443",
-    "\u044e",
-)
-
-_EN_SUFFIXES = (
-    "ingly",
-    "edly",
-    "ization",
-    "ation",
-    "ments",
-    "ment",
-    "ingly",
-    "edly",
-    "ing",
-    "edly",
-    "edly",
-    "ed",
-    "ly",
-    "es",
-    "s",
-)
-
-
 class VKKnowledgeStore:
+    _DEFAULT_BASE_NAME = "Основная база знаний"
+
     def __init__(self, path: Path | None = None):
         default_path = PROJECT_ROOT / "db" / "knowledge_base.db"
         env_path = (
@@ -134,6 +28,10 @@ class VKKnowledgeStore:
             or os.getenv("VK_KNOWLEDGE_BASE_PATH", "").strip()
         )
         self._path = Path(env_path) if env_path else (path or default_path)
+        self._assets_dir = Path(
+            os.getenv("KNOWLEDGE_ASSETS_DIR", str((PROJECT_ROOT / "db" / "knowledge_assets").resolve()))
+        )
+        self._assets_dir.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
         self._vector_rag = VKVectorRAG(tokenize=self._tokenize)
         self._init_db()
@@ -174,23 +72,40 @@ class VKKnowledgeStore:
         *,
         filename: str,
         content: str,
+        source_type: str = "file",
+        title: str | None = None,
         mime_type: str | None = None,
+        asset_path: str | None = None,
         language: str = "ru",
         name: str | None = None,
         knowledge_base_id: str | None = None,
     ) -> dict[str, Any]:
         cleaned_filename = (filename or "").strip()
         cleaned_content = (content or "").strip()
+        cleaned_source_type = (source_type or "file").strip().lower() or "file"
         cleaned_language = (language or "ru").strip().lower() or "ru"
         cleaned_name = (name or "").strip()
+        cleaned_title = (title or "").strip()
+        cleaned_asset_path = (asset_path or "").strip() or None
 
         if not cleaned_filename:
             raise ValueError("Filename is required")
         if not cleaned_content:
             raise ValueError("File content is empty")
 
-        base_name = cleaned_name or Path(cleaned_filename).stem or "Knowledge base"
+        base_name = cleaned_name or self._DEFAULT_BASE_NAME
+        document_title = cleaned_title or Path(cleaned_filename).stem or "Document"
         with self._lock:
+            existing_kb_id = (knowledge_base_id or "").strip()
+            if not cleaned_name and existing_kb_id:
+                with self._connect() as conn:
+                    existing_row = conn.execute(
+                        "SELECT name FROM knowledge_bases WHERE id = ?",
+                        (existing_kb_id,),
+                    ).fetchone()
+                if existing_row and str(existing_row["name"] or "").strip():
+                    base_name = str(existing_row["name"]).strip()
+
             kb_id = self._ensure_base(
                 knowledge_base_id=knowledge_base_id,
                 name=base_name,
@@ -203,18 +118,19 @@ class VKKnowledgeStore:
                     """
                     INSERT INTO knowledge_documents (
                         id, knowledge_base_id, source_type, title, filename, mime_type,
-                        content, created_at, updated_at
+                        content, asset_path, created_at, updated_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         doc_id,
                         kb_id,
-                        "file",
-                        Path(cleaned_filename).stem,
+                        cleaned_source_type,
+                        document_title,
                         cleaned_filename,
                         (mime_type or "").strip() or None,
                         cleaned_content,
+                        cleaned_asset_path,
                         now,
                         now,
                     ),
@@ -278,7 +194,7 @@ class VKKnowledgeStore:
                 return None
             docs = conn.execute(
                 """
-                SELECT id, source_type, title, filename, mime_type, content, created_at, updated_at
+                SELECT id, source_type, title, filename, mime_type, content, asset_path, created_at, updated_at
                 FROM knowledge_documents
                 WHERE knowledge_base_id = ?
                 ORDER BY created_at ASC
@@ -296,6 +212,7 @@ class VKKnowledgeStore:
                     "filename": doc["filename"],
                     "mime_type": doc["mime_type"],
                     "content": doc["content"] or "",
+                    "asset_path": doc["asset_path"],
                     "created_at": doc["created_at"],
                     "updated_at": doc["updated_at"],
                 }
@@ -341,7 +258,7 @@ class VKKnowledgeStore:
             if cleaned_kb_id:
                 row = conn.execute(
                     """
-                    SELECT id, knowledge_base_id
+                    SELECT id, knowledge_base_id, asset_path
                     FROM knowledge_documents
                     WHERE id = ? AND knowledge_base_id = ?
                     """,
@@ -350,7 +267,7 @@ class VKKnowledgeStore:
             else:
                 row = conn.execute(
                     """
-                    SELECT id, knowledge_base_id
+                    SELECT id, knowledge_base_id, asset_path
                     FROM knowledge_documents
                     WHERE id = ?
                     """,
@@ -361,6 +278,7 @@ class VKKnowledgeStore:
                 raise ValueError("Knowledge document not found")
 
             kb_id = str(row["knowledge_base_id"])
+            asset_path_value = str(row["asset_path"] or "").strip()
             conn.execute(
                 "DELETE FROM knowledge_documents WHERE id = ?",
                 (cleaned_document_id,),
@@ -375,6 +293,13 @@ class VKKnowledgeStore:
                 (kb_id,),
             ).fetchone()
             remaining_docs = int((remaining["c"] if remaining else 0) or 0)
+        if asset_path_value:
+            try:
+                resolved = self._resolve_asset_path(asset_path_value)
+                if resolved.exists() and resolved.is_file():
+                    resolved.unlink()
+            except Exception:
+                pass
 
         return {
             "document_id": cleaned_document_id,
@@ -437,6 +362,7 @@ class VKKnowledgeStore:
         *,
         query: str,
         knowledge_base_id: str | None = None,
+        source_types: list[str] | None = None,
         max_chunks: int | None = None,
         max_chars: int = 5000,
         chunk_size: int = 900,
@@ -451,6 +377,22 @@ class VKKnowledgeStore:
             return []
 
         documents = list(kb.get("documents") or [])
+        image_only_request = False
+        if source_types:
+            allowed_types = {
+                str(value or "").strip().lower()
+                for value in source_types
+                if str(value or "").strip()
+            }
+            if allowed_types:
+                image_only_request = allowed_types == {"image"}
+                documents = [
+                    doc
+                    for doc in documents
+                    if str(doc.get("source_type") or "").strip().lower() in allowed_types
+                ]
+        if not documents:
+            return []
         if documents:
             try:
                 vector_snippets = self._vector_rag.retrieve(
@@ -484,9 +426,12 @@ class VKKnowledgeStore:
         query_signal_tokens = {
             token
             for token in query_token_set
-            if len(token) >= 4 and token not in _GENERIC_STOPWORDS
+            if len(token) >= 4
         }
         required_token_overlap = 1 if len(query_signal_tokens) <= 4 else 2
+        if image_only_request:
+            # Image descriptions are usually short; avoid over-filtering useful refs.
+            required_token_overlap = 1
 
         if not query_tokens and not raw_query_terms:
             return []
@@ -533,7 +478,8 @@ class VKKnowledgeStore:
             if lexical_hits == 0 and char_overlap < 0.28:
                 continue
             if signal_overlap_count < required_token_overlap and phrase_hits == 0 and raw_term_hits == 0:
-                continue
+                if not (image_only_request and token_overlap_count > 0):
+                    continue
 
             overlap_bonus = min(1.8, token_overlap_count * 0.22) + min(0.9, phrase_hits * 0.35)
             total_score = bm25_score + phrase_score + raw_term_score + char_score
@@ -546,6 +492,7 @@ class VKKnowledgeStore:
                     "title": chunk["title"],
                     "source_type": chunk["source_type"],
                     "filename": chunk["filename"],
+                    "asset_path": chunk.get("asset_path"),
                     "snippet": chunk["text"],
                     "score": round(total_score, 4),
                     "_score": float(total_score),
@@ -603,6 +550,7 @@ class VKKnowledgeStore:
                     "title": item["title"],
                     "source_type": item["source_type"],
                     "filename": item["filename"],
+                    "asset_path": item.get("asset_path"),
                     "snippet": snippet,
                     "score": round(float(item.get("_score") or item.get("score") or 0.0), 4),
                     "matched_terms": sorted(
@@ -634,7 +582,7 @@ class VKKnowledgeStore:
             token_overlap = int(explain.get("token_overlap") or 0)
             signal_overlap = int(explain.get("signal_overlap") or 0)
             matched_terms = [str(term).strip().lower() for term in (item.get("matched_terms") or []) if str(term).strip()]
-            informative_terms_count = len([term for term in matched_terms if term not in _GENERIC_STOPWORDS and len(term) >= 4])
+            informative_terms_count = len([term for term in matched_terms if len(term) >= 4])
 
             if score < min_keep_score and token_overlap < 2 and signal_overlap < 2:
                 continue
@@ -712,12 +660,19 @@ class VKKnowledgeStore:
                     filename TEXT,
                     mime_type TEXT,
                     content TEXT NOT NULL,
+                    asset_path TEXT,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     FOREIGN KEY (knowledge_base_id) REFERENCES knowledge_bases(id) ON DELETE CASCADE
                 )
                 """
             )
+            columns = {
+                str(row["name"])
+                for row in conn.execute("PRAGMA table_info(knowledge_documents)").fetchall()
+            }
+            if "asset_path" not in columns:
+                conn.execute("ALTER TABLE knowledge_documents ADD COLUMN asset_path TEXT")
             conn.execute(
                 """
                 CREATE INDEX IF NOT EXISTS idx_knowledge_documents_kb
@@ -797,9 +752,9 @@ class VKKnowledgeStore:
                     """
                     INSERT INTO knowledge_documents (
                         id, knowledge_base_id, source_type, title, filename, mime_type,
-                        content, created_at, updated_at
+                        content, asset_path, created_at, updated_at
                     )
-                    VALUES (?, ?, 'text', ?, NULL, 'text/plain', ?, ?, ?)
+                    VALUES (?, ?, 'text', ?, NULL, 'text/plain', ?, NULL, ?, ?)
                     """,
                     (uuid.uuid4().hex, knowledge_base_id, title, content, now, now),
                 )
@@ -837,25 +792,11 @@ class VKKnowledgeStore:
         token = (raw or "").lower().replace("\u0451", "\u0435").strip("_-")
         if len(token) < 3:
             return ""
-        if token in _GENERIC_STOPWORDS:
-            return ""
         if not any(ch.isalpha() for ch in token):
             return ""
         if token.isdigit():
             return ""
-
-        if re.search(r"[\u0430-\u044f]", token):
-            for suffix in _RU_SUFFIXES:
-                if token.endswith(suffix) and len(token) - len(suffix) >= 3:
-                    token = token[: -len(suffix)]
-                    break
-        elif re.search(r"[a-z]", token):
-            for suffix in _EN_SUFFIXES:
-                if token.endswith(suffix) and len(token) - len(suffix) >= 3:
-                    token = token[: -len(suffix)]
-                    break
-
-        if len(token) < 3 or token in _GENERIC_STOPWORDS:
+        if len(token) < 3:
             return ""
         return token
 
@@ -1000,6 +941,7 @@ class VKKnowledgeStore:
             )
             source_type = str(document.get("source_type") or "").strip() or None
             filename = str(document.get("filename") or "").strip() or None
+            asset_path = str(document.get("asset_path") or "").strip() or None
 
             if len(content) <= chunk_size:
                 tokens = self._tokenize(content)
@@ -1010,6 +952,7 @@ class VKKnowledgeStore:
                             "title": title,
                             "source_type": source_type,
                             "filename": filename,
+                            "asset_path": asset_path,
                             "text": content,
                             "tokens": tokens,
                             "normalized_text": normalized_text,
@@ -1036,6 +979,7 @@ class VKKnowledgeStore:
                                 "title": title,
                                 "source_type": source_type,
                                 "filename": filename,
+                                "asset_path": asset_path,
                                 "text": chunk_text,
                                 "tokens": tokens,
                                 "normalized_text": normalized_text,
@@ -1068,6 +1012,7 @@ class VKKnowledgeStore:
                     "title": chunk.get("title"),
                     "source_type": chunk.get("source_type"),
                     "filename": chunk.get("filename"),
+                    "asset_path": chunk.get("asset_path"),
                     "snippet": snippet,
                     "score": 0.0,
                 }
@@ -1076,3 +1021,10 @@ class VKKnowledgeStore:
             if max_chunks is not None and len(selected) >= max_chunks:
                 break
         return selected
+
+    def _resolve_asset_path(self, asset_path: str) -> Path:
+        raw = str(asset_path or "").strip()
+        path = Path(raw)
+        if path.is_absolute():
+            return path
+        return (PROJECT_ROOT / path).resolve()

@@ -43,6 +43,32 @@ class GigaChatSettings:
 
 
 @dataclass(frozen=True)
+class YandexGPTSettings:
+    api_key: str | None
+    iam_token: str | None
+    model_uri: str
+    base_url: str
+    timeout_sec: int
+
+
+@dataclass(frozen=True)
+class AIUsagePricingSettings:
+    currency: str
+    gigachat_input_per_1k: float
+    gigachat_output_per_1k: float
+    yandex_input_per_1k: float
+    yandex_output_per_1k: float
+
+    def rates_for(self, provider: str) -> tuple[float, float]:
+        normalized = str(provider or "").strip().lower()
+        if normalized == "gigachat":
+            return self.gigachat_input_per_1k, self.gigachat_output_per_1k
+        if normalized == "yandex":
+            return self.yandex_input_per_1k, self.yandex_output_per_1k
+        return 0.0, 0.0
+
+
+@dataclass(frozen=True)
 class TrendsSettings:
     db_path: str
     window_hours: int
@@ -66,6 +92,20 @@ def is_gigachat_configured() -> bool:
         or os.getenv("GIGACHAT_AUTHORIZATION_KEY", "").strip()
         or os.getenv("GIGACHAT_ACCESS_TOKEN", "").strip()
     )
+
+
+def is_yandexgpt_configured() -> bool:
+    _load_project_env()
+    has_auth = bool(
+        os.getenv("YANDEX_GPT_API_KEY", "").strip()
+        or os.getenv("YANDEX_CLOUD_API_KEY", "").strip()
+        or os.getenv("YANDEX_GPT_IAM_TOKEN", "").strip()
+    )
+    has_model = bool(
+        os.getenv("YANDEX_GPT_MODEL_URI", "").strip()
+        or os.getenv("YANDEX_CLOUD_FOLDER_ID", "").strip()
+    )
+    return has_auth and has_model
 
 
 def is_vk_configured() -> bool:
@@ -206,6 +246,70 @@ def load_gigachat_settings() -> GigaChatSettings:
         scope=scope,
         auth_url=auth_url,
         base_url=base_url,
+    )
+
+
+def load_yandexgpt_settings() -> YandexGPTSettings:
+    _load_project_env()
+
+    api_key = (
+        os.getenv("YANDEX_GPT_API_KEY", "").strip()
+        or os.getenv("YANDEX_CLOUD_API_KEY", "").strip()
+        or None
+    )
+    iam_token = os.getenv("YANDEX_GPT_IAM_TOKEN", "").strip() or None
+    folder_id = os.getenv("YANDEX_CLOUD_FOLDER_ID", "").strip()
+    model_name = os.getenv("YANDEX_GPT_MODEL_NAME", "yandexgpt-5-lite").strip() or "yandexgpt-5-lite"
+    model_uri = os.getenv("YANDEX_GPT_MODEL_URI", "").strip() or ""
+    if not model_uri and folder_id:
+        model_uri = f"gpt://{folder_id}/{model_name}"
+    base_url = (
+        os.getenv("YANDEX_GPT_BASE_URL", "https://llm.api.cloud.yandex.net/foundationModels/v1/completion").strip()
+        or "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
+    )
+    timeout_raw = os.getenv("YANDEX_GPT_TIMEOUT_SEC", "60").strip()
+    try:
+        timeout_sec = max(10, int(timeout_raw))
+    except ValueError:
+        timeout_sec = 60
+
+    if not (api_key or iam_token):
+        raise RuntimeError(
+            "Set YANDEX_GPT_API_KEY (or YANDEX_CLOUD_API_KEY) or YANDEX_GPT_IAM_TOKEN in .env"
+        )
+    if not model_uri:
+        raise RuntimeError(
+            "Set YANDEX_GPT_MODEL_URI in .env or YANDEX_CLOUD_FOLDER_ID to auto-build model URI"
+        )
+
+    return YandexGPTSettings(
+        api_key=api_key,
+        iam_token=iam_token,
+        model_uri=model_uri,
+        base_url=base_url,
+        timeout_sec=timeout_sec,
+    )
+
+
+def load_ai_usage_pricing_settings() -> AIUsagePricingSettings:
+    _load_project_env()
+
+    def _float_from_env(name: str, default: float) -> float:
+        raw = os.getenv(name, "").strip()
+        if not raw:
+            return float(default)
+        try:
+            return max(0.0, float(raw))
+        except ValueError:
+            return float(default)
+
+    currency = os.getenv("AI_USAGE_CURRENCY", "RUB").strip().upper() or "RUB"
+    return AIUsagePricingSettings(
+        currency=currency,
+        gigachat_input_per_1k=_float_from_env("GIGACHAT_PRICE_INPUT_PER_1K", 0.0),
+        gigachat_output_per_1k=_float_from_env("GIGACHAT_PRICE_OUTPUT_PER_1K", 0.0),
+        yandex_input_per_1k=_float_from_env("YANDEX_GPT_PRICE_INPUT_PER_1K", 0.0),
+        yandex_output_per_1k=_float_from_env("YANDEX_GPT_PRICE_OUTPUT_PER_1K", 0.0),
     )
 
 

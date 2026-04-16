@@ -32,6 +32,14 @@ _CHALLENGE_TITLES = {
     "VK | VK",
 }
 
+_BAD_PAGE_TITLES = {
+    "error",
+    "ошибка",
+    "vk",
+    "доступ ограничен",
+    "access denied",
+}
+
 _MONTHS = {
     "jan": 1, "january": 1, "\u044f\u043d\u0432": 1, "\u044f\u043d\u0432\u0430\u0440\u044f": 1,
     "feb": 2, "february": 2, "\u0444\u0435\u0432": 2, "\u0444\u0435\u0432\u0440\u0430\u043b\u044f": 2,
@@ -224,45 +232,51 @@ def fetch_public_group_data(screen_name: str, group_id: int | None = None, limit
 
 def _fetch_from_browser(browser, urls: list[str], clean_name: str, limit: int, group_id: int | None) -> PublicVKGroupData:
     last_error: Exception | None = None
-    last_empty: PublicVKGroupData | None = None
+    best_result: PublicVKGroupData | None = None
     for idx, url in enumerate(urls):
         page = browser.new_page(
             viewport={"width": 1440, "height": 2400} if idx == 0 else {"width": 430, "height": 2400}
         )
         try:
             result = _fetch_from_page(page, url, clean_name, limit, group_id)
-            if result.posts:
+            if result.posts and len(result.posts) >= max(3, int(limit * 0.6)):
                 return result
-            last_empty = result
+            if best_result is None or len(result.posts) > len(best_result.posts):
+                best_result = result
         except Exception as exc:
             last_error = exc
         finally:
             page.close()
+    if best_result is not None and best_result.posts:
+        return best_result
     if last_error:
         raise last_error
-    if last_empty is not None:
-        return last_empty
+    if best_result is not None:
+        return best_result
     return PublicVKGroupData(name=clean_name, screen_name=clean_name, posts=[])
 
 
 def _fetch_from_context(context, urls: list[str], clean_name: str, limit: int, group_id: int | None) -> PublicVKGroupData:
     last_error: Exception | None = None
-    last_empty: PublicVKGroupData | None = None
+    best_result: PublicVKGroupData | None = None
     for url in urls:
         page = context.new_page()
         try:
             result = _fetch_from_page(page, url, clean_name, limit, group_id)
-            if result.posts:
+            if result.posts and len(result.posts) >= max(3, int(limit * 0.6)):
                 return result
-            last_empty = result
+            if best_result is None or len(result.posts) > len(best_result.posts):
+                best_result = result
         except Exception as exc:
             last_error = exc
         finally:
             page.close()
+    if best_result is not None and best_result.posts:
+        return best_result
     if last_error:
         raise last_error
-    if last_empty is not None:
-        return last_empty
+    if best_result is not None:
+        return best_result
     return PublicVKGroupData(name=clean_name, screen_name=clean_name, posts=[])
 
 
@@ -315,7 +329,14 @@ def _fetch_from_page(page, url: str, clean_name: str, limit: int, group_id: int 
     raw_title = (page.title() or "").strip()
     title = raw_title.replace("| VK", "").strip()
     title = re.sub(r"\s*:\s*posts?$", "", title, flags=re.IGNORECASE).strip()
-    if raw_title in _CHALLENGE_TITLES or title in _CHALLENGE_TITLES:
+    title_lc = title.lower()
+    if (
+        raw_title in _CHALLENGE_TITLES
+        or title in _CHALLENGE_TITLES
+        or title_lc in _BAD_PAGE_TITLES
+        or title_lc.startswith("error")
+        or title_lc.startswith("ошибка")
+    ):
         title = clean_name
     return PublicVKGroupData(name=title or clean_name, screen_name=clean_name, posts=posts)
 
@@ -510,6 +531,8 @@ def _extract_search_results(raw_links: list[dict], query: str, limit: int) -> li
         path = href.split("?", 1)[0].strip("/")
         if not path or "/" in path or path in ignored:
             continue
+        if not _is_likely_group_screen_name(path):
+            continue
         if path.startswith("audio") or path.startswith("away.php") or path.endswith(".php"):
             continue
         if path in seen:
@@ -547,6 +570,27 @@ def _extract_search_results(raw_links: list[dict], query: str, limit: int) -> li
         if len(results) >= limit:
             break
     return results
+
+
+def _is_likely_group_screen_name(path: str) -> bool:
+    value = (path or "").strip()
+    if not value:
+        return False
+    lowered = value.lower()
+    if lowered.startswith("@@"):
+        return False
+    if any(part in lowered for part in {"rss-", "-rss-", "article", "podcast", "clip"}):
+        return False
+    if lowered.startswith(("id", "wall", "photo", "video", "feed", "topic")):
+        return False
+    # Typical public/community aliases and numeric IDs.
+    if re.fullmatch(r"(club|public|event)\d+", lowered):
+        return True
+    # Human-readable aliases.
+    if not re.fullmatch(r"[a-zA-Zа-яА-ЯёЁ0-9_.-]{3,64}", value):
+        return False
+    # Must contain at least one letter to avoid random numeric fragments.
+    return bool(re.search(r"[a-zA-Zа-яА-ЯёЁ]", value))
 
 
 def _canon_search_token(value: str) -> str:
@@ -751,21 +795,37 @@ def _extract_post_metrics_from_html(raw_html: str) -> dict[str, int]:
     if views_match:
         views = int(views_match.group(1))
 
-    # Fallback for DOM variants where explicit labels are absent but numeric counters exist.
     raw_counts = [int(value) for value in re.findall(r'data-count="(\d+)"', html)]
+    labeled_hits = sum(1 for v in [likes, comments, reposts, views] if v > 0)
     if raw_counts:
         unique_counts = sorted(set(raw_counts), reverse=True)
-        if likes == 0:
-            if views > 0 and unique_counts[0] == views and len(unique_counts) >= 2:
-                likes = unique_counts[1]
-            else:
-                likes = unique_counts[0]
-        if comments == 0 and len(unique_counts) >= 2:
-            comments = unique_counts[1]
-        if reposts == 0 and len(unique_counts) >= 3:
-            reposts = unique_counts[2]
-        if views == 0 and likes > 0 and unique_counts[0] >= likes * 5:
-            views = unique_counts[0]
+        # If no labeled counters exist, we still provide a deterministic fallback:
+        # largest count -> likes, next -> comments/reposts.
+        if labeled_hits == 0:
+            likes = unique_counts[0]
+            if len(unique_counts) >= 2:
+                comments = unique_counts[1]
+            if len(unique_counts) >= 3:
+                reposts = unique_counts[2]
+        # Conservative merge when some labeled counters were already found.
+        elif labeled_hits >= 2:
+            if likes == 0:
+                if views > 0 and unique_counts[0] == views and len(unique_counts) >= 2:
+                    likes = unique_counts[1]
+                else:
+                    likes = unique_counts[0]
+            if comments == 0 and len(unique_counts) >= 2:
+                comments = unique_counts[1]
+            if reposts == 0 and len(unique_counts) >= 3:
+                reposts = unique_counts[2]
+            if views == 0 and likes > 0 and unique_counts[0] >= likes * 5:
+                views = unique_counts[0]
+
+    # Basic sanity filters against obviously wrong metric combinations.
+    if likes > 0 and comments > likes * 3:
+        comments = 0
+    if likes > 0 and reposts > likes * 2:
+        reposts = 0
 
     return {
         "likes": likes,
