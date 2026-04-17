@@ -576,7 +576,13 @@ function AnalyzeResultView({ data }) {
     { key: "average_comments", label: "Средние комментарии", value: Number(metrics.average_comments || 0) },
     { key: "posts_per_day", label: "Постов в день", value: Number(metrics.posts_per_day || 0) },
   ].filter((item) => item.value > 0);
-  const visibleTopPosts = topPosts;
+  const visibleTopPosts = topPosts.filter((post) => {
+    const views = Number(post?.views || 0);
+    const likes = Number(post?.likes || 0);
+    const comments = Number(post?.comments || 0);
+    const reposts = Number(post?.reposts || 0);
+    return views > 0 || likes > 0 || comments > 0 || reposts > 0;
+  });
 
   return (
     <section className="result-view">

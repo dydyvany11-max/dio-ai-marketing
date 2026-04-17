@@ -12,7 +12,7 @@ import requests
 import urllib3
 from pydantic import BaseModel, Field
 
-from src.api.config import GigaChatSettings
+from src.api.config import GigaChatSettings, YandexGPTSettings
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -54,6 +54,82 @@ class GigaChatVKClient:
         self._settings = settings
         self._access_token: str | None = None
         self._token_expires_at: float = 0.0
+        self._input_tokens = 0
+        self._output_tokens = 0
+        self._total_tokens = 0
+        self._request_count = 0
+        self._usage_events: list[dict[str, int]] = []
+
+    def provider_name(self) -> str:
+        return "gigachat"
+
+    def model_name(self) -> str:
+        return str(self._settings.model or "GigaChat")
+
+    def auth_mode(self) -> str:
+        return "auth_key" if self._settings.authorization_key else "credentials"
+
+    def get_usage_totals(self) -> dict[str, int]:
+        return {
+            "input_tokens": max(0, int(self._input_tokens)),
+            "output_tokens": max(0, int(self._output_tokens)),
+            "total_tokens": max(0, int(self._total_tokens)),
+        }
+
+    def get_request_count(self) -> int:
+        return int(self._request_count)
+
+    def get_usage_events(self) -> list[dict[str, int]]:
+        return [dict(item) for item in self._usage_events]
+
+    def _capture_usage(self, payload: Any) -> None:
+        usage_candidates: list[dict[str, Any]] = []
+        if isinstance(payload, dict):
+            direct_usage = payload.get("usage")
+            if isinstance(direct_usage, dict):
+                usage_candidates.append(direct_usage)
+            result_usage = payload.get("result")
+            if isinstance(result_usage, dict) and isinstance(result_usage.get("usage"), dict):
+                usage_candidates.append(result_usage.get("usage"))
+
+        for usage in usage_candidates:
+            prompt_tokens = usage.get("prompt_tokens")
+            if prompt_tokens is None:
+                prompt_tokens = usage.get("promptTokens")
+            if prompt_tokens is None:
+                prompt_tokens = usage.get("input_tokens")
+            if prompt_tokens is None:
+                prompt_tokens = usage.get("inputTokens")
+
+            completion_tokens = usage.get("completion_tokens")
+            if completion_tokens is None:
+                completion_tokens = usage.get("completionTokens")
+            if completion_tokens is None:
+                completion_tokens = usage.get("output_tokens")
+            if completion_tokens is None:
+                completion_tokens = usage.get("outputTokens")
+
+            total_tokens = usage.get("total_tokens")
+            if total_tokens is None:
+                total_tokens = usage.get("totalTokens")
+
+            in_tokens = int(prompt_tokens or 0)
+            out_tokens = int(completion_tokens or 0)
+            all_tokens = int(total_tokens or (in_tokens + out_tokens))
+
+            if in_tokens <= 0 and out_tokens <= 0 and all_tokens <= 0:
+                continue
+
+            self._input_tokens += max(0, in_tokens)
+            self._output_tokens += max(0, out_tokens)
+            self._total_tokens += max(0, all_tokens)
+            self._usage_events.append(
+                {
+                    "input_tokens": max(0, in_tokens),
+                    "output_tokens": max(0, out_tokens),
+                    "total_tokens": max(0, all_tokens),
+                }
+            )
 
     def generate_post(
         self,
@@ -287,14 +363,24 @@ class GigaChatVKClient:
             "search_tags: 6-12 коротких тематических тегов/фраз для VK-поиска конкурентов.\n"
             "Важно: в search_tags не включай слишком общие служебные слова; теги должны быть предметными и нишевыми.\n"
             "Используй только тематические термины ниши из описания группы и постов.\n"
+            "search_tags должны быть запросами для поиска ПРЯМЫХ конкурентов, а не общими словами.\n"
+            "Предпочитай фразы вида: ниша + услуга/продукт + платформа/бренд (+ регион, если есть).\n"
+            "Не добавляй размытые теги без нишевого смысла.\n"
             "audience_interests и search_tags формулируй на русском, коротко и по сути ниши; "
             "не используй абстрактные слова без предметного контекста.\n"
             "recommendations: 2-4 объекта с полями title, action, rationale.\n"
             "Все поля и тексты должны быть на русском языке.\n"
-            "Если данных мало, явно зафиксируй ограничения в limitations.\n\n"
+            "Если данных мало, явно зафиксируй ограничения в limitations.\n"
+            "Если постов мало или они короткие, делай выводы по названию, описанию, activity и общеизвестному рыночному контексту бренда.\n"
+            "Для search_tags в таком случае опирайся в первую очередь на дескриптор компании (описание + деятельность), а не на шумные слова из постов.\n\n"
             f"Язык ответа: {language}.\n\n"
             f"JSON-схема:\n{json.dumps(schema, ensure_ascii=False)}\n\n"
             f"Входные данные:\n{json.dumps(compact_payload, ensure_ascii=False)}"
+        )
+        full_prompt += (
+            "\nIf posts are sparse or short, use group card fields (name/activity/description/site) as primary signal.\n"
+            "You may use publicly known market context of the brand to make search tags more precise.\n"
+            "Return only focused competitor-search phrases, no generic filler words.\n"
         )
         content = self._chat(full_prompt)
         try:
@@ -338,10 +424,19 @@ class GigaChatVKClient:
             "Верни только JSON без markdown.\n"
             "Ключ верхнего уровня строго один: search_tags.\n"
             "search_tags: 6-12 коротких тегов/фраз.\n"
-            "Язык тегов: русский.\n\n"
+            "Язык тегов: русский.\n"
+            "Если постов мало, опирайся на название, описание, activity и тип услуг компании.\n"
+            "search_tags должны быть высоко-намеренными запросами для прямого поиска конкурентов в VK.\n"
+            "Комбинируй в тегах нишу + услугу/продукт + платформу/бренд (+ регион при наличии).\n"
+            "Исключай абстрактные и слишком общие слова.\n\n"
             f"Язык ответа: {language}.\n\n"
             f"JSON-схема:\n{json.dumps(schema, ensure_ascii=False)}\n\n"
             f"Входные данные:\n{json.dumps(payload, ensure_ascii=False)}"
+        )
+        full_prompt += (
+            "\nIf company post corpus is sparse, infer tags from group card and known market context of the brand.\n"
+            "Prefer intent-rich phrases that users would type to find direct competitors in VK.\n"
+            "Avoid vague tags and stop-words.\n"
         )
         content = self._chat(full_prompt)
         json_text = self._extract_json(content)
@@ -374,12 +469,6 @@ class GigaChatVKClient:
         return normalized
 
     def _chat(self, prompt: str) -> str:
-
-        print("\n" + "="*50)
-        print("🚀 ОТПРАВКА ПРОМПТА К GIGACHAT:")
-        print(prompt)
-        print("="*50 + "\n")
-
         payload = {
             "model": self._settings.model,
             "messages": [{"role": "user", "content": prompt}],
@@ -389,10 +478,6 @@ class GigaChatVKClient:
         message = data.get("choices", [{}])[0].get("message", {})
         content = message.get("content")
 
-        print("\n" + "✨ ОТВЕТ ОТ НЕЙРОНКИ:")
-        print(content)
-        print("="*50 + "\n")
-        
         if isinstance(content, str):
             return content
         if isinstance(content, list):
@@ -410,6 +495,7 @@ class GigaChatVKClient:
 
     def _chat_raw(self, payload: dict[str, Any]) -> dict[str, Any]:
         token = self._get_access_token()
+        self._request_count += 1
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
@@ -424,7 +510,9 @@ class GigaChatVKClient:
                 timeout=60,
             )
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            self._capture_usage(data)
+            return data
         except requests.RequestException as exc:
             raise ValueError(f"GigaChat request failed: {exc}") from exc
 
@@ -649,6 +737,8 @@ class GigaChatVKClient:
                 "screen_name": group.get("screen_name"),
                 "members_count": group.get("members_count"),
                 "activity": group.get("activity"),
+                "description": group.get("description"),
+                "site": group.get("site"),
             },
             "metrics": {
                 "average_views": metrics.get("average_views"),
@@ -885,3 +975,140 @@ def _shrink_post_to_max_length(text: str, max_chars: int) -> str:
 
     hard_trim = content[:max_chars].rsplit(" ", 1)[0].strip()
     return hard_trim if hard_trim else content[:max_chars].strip()
+
+
+class YandexGPTVKClient(GigaChatVKClient):
+    """Yandex Foundation Models (YandexGPT) client for text tasks."""
+
+    def __init__(self, settings: YandexGPTSettings):
+        # Reuse parent generation/parsing logic; override transport/auth specifics.
+        self._settings = settings
+        self._input_tokens = 0
+        self._output_tokens = 0
+        self._total_tokens = 0
+        self._request_count = 0
+        self._usage_events: list[dict[str, int]] = []
+
+    def provider_name(self) -> str:
+        return "yandex"
+
+    def model_name(self) -> str:
+        return str(self._settings.model_uri or "yandexgpt")
+
+    def auth_mode(self) -> str:
+        return "api_key" if self._settings.api_key else "iam_token"
+
+    def get_usage_totals(self) -> dict[str, int]:
+        return {
+            "input_tokens": max(0, int(self._input_tokens)),
+            "output_tokens": max(0, int(self._output_tokens)),
+            "total_tokens": max(0, int(self._total_tokens)),
+        }
+
+    def get_request_count(self) -> int:
+        return int(self._request_count)
+
+    def get_usage_events(self) -> list[dict[str, int]]:
+        return [dict(item) for item in self._usage_events]
+
+    def _capture_usage(self, payload: Any) -> None:
+        usage = None
+        if isinstance(payload, dict):
+            usage = payload.get("usage")
+            if usage is None:
+                usage = (payload.get("result") or {}).get("usage")
+        if not isinstance(usage, dict):
+            return
+
+        in_tokens = usage.get("inputTextTokens")
+        if in_tokens is None:
+            in_tokens = usage.get("input_tokens")
+        if in_tokens is None:
+            in_tokens = usage.get("prompt_tokens")
+
+        out_tokens = usage.get("completionTokens")
+        if out_tokens is None:
+            out_tokens = usage.get("output_tokens")
+        if out_tokens is None:
+            out_tokens = usage.get("completion_tokens")
+
+        all_tokens = usage.get("totalTokens")
+        if all_tokens is None:
+            all_tokens = usage.get("total_tokens")
+
+        in_value = int(in_tokens or 0)
+        out_value = int(out_tokens or 0)
+        total_value = int(all_tokens or (in_value + out_value))
+
+        if in_value <= 0 and out_value <= 0 and total_value <= 0:
+            return
+
+        self._input_tokens += max(0, in_value)
+        self._output_tokens += max(0, out_value)
+        self._total_tokens += max(0, total_value)
+        self._usage_events.append(
+            {
+                "input_tokens": max(0, in_value),
+                "output_tokens": max(0, out_value),
+                "total_tokens": max(0, total_value),
+            }
+        )
+
+    def _chat(self, prompt: str) -> str:
+        payload = {
+            "modelUri": self._settings.model_uri,
+            "completionOptions": {
+                "stream": False,
+                "temperature": 0.2,
+                "maxTokens": "4000",
+            },
+            "messages": [
+                {
+                    "role": "user",
+                    "text": prompt,
+                }
+            ],
+        }
+        data = self._chat_raw(payload)
+
+        result = data.get("result") if isinstance(data, dict) else {}
+        alternatives = result.get("alternatives") if isinstance(result, dict) else []
+        if isinstance(alternatives, list) and alternatives:
+            first = alternatives[0] or {}
+            message = first.get("message") if isinstance(first, dict) else {}
+            text_value = message.get("text") if isinstance(message, dict) else None
+            if isinstance(text_value, str) and text_value.strip():
+                return text_value
+
+        raise ValueError(f"YandexGPT returned unexpected response: {data}")
+
+    def _chat_raw(self, payload: dict[str, Any]) -> dict[str, Any]:
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        if self._settings.api_key:
+            headers["Authorization"] = f"Api-Key {self._settings.api_key}"
+        elif self._settings.iam_token:
+            headers["Authorization"] = f"Bearer {self._settings.iam_token}"
+        else:
+            raise RuntimeError("YandexGPT auth is not configured")
+
+        response = requests.post(
+            self._settings.base_url,
+            headers=headers,
+            json=payload,
+            timeout=max(10, int(self._settings.timeout_sec or 60)),
+        )
+        response.raise_for_status()
+        data = response.json()
+        self._capture_usage(data)
+        self._request_count += 1
+        return data
+
+    def generate_image(self, *args, **kwargs):  # noqa: ANN002, ANN003, ANN201
+        raise RuntimeError("YandexGPT text model does not support image generation in this endpoint")
+
+    def generate_video(self, *args, **kwargs):  # noqa: ANN002, ANN003, ANN201
+        raise RuntimeError("YandexGPT text model does not support video generation in this endpoint")
+

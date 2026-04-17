@@ -1,5 +1,6 @@
 import base64
 import json
+import logging
 import os
 import re
 from datetime import datetime
@@ -91,6 +92,9 @@ from src.api.services.vk_publisher import VKPublisher, VKPublishRequest as VKPub
 
 router = APIRouter(prefix="/vk", tags=["VK"])
 _knowledge_store = VKKnowledgeStore()
+# Use uvicorn logger so trace messages are visible in backend console by default.
+logger = logging.getLogger("uvicorn.error")
+logger.setLevel(logging.INFO)
 
 _VK_TOKEN_PATH = Path(os.getenv("VK_TOKEN_PATH", str(PROJECT_ROOT / "vk_token.json")))
 
@@ -238,6 +242,17 @@ def _build_kb_chunks_payload(kb_snippets: list[dict]) -> list[VKRAGChunkUsedResp
             )
         )
     return payload
+
+
+def _json_for_log(payload: object, *, max_chars: int = 120000) -> str:
+    text = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
+    full = str(os.getenv("VK_AI_TRACE_FULL", "0") or "0").strip().lower() in {"1", "true", "yes", "on"}
+    if full or len(text) <= max_chars:
+        return text
+    return (
+        text[:max_chars].rstrip()
+        + f"\n...<trimmed: {len(text) - max_chars} chars omitted, set VK_AI_TRACE_FULL=1 for full dump>"
+    )
 
 
 def _build_ai_usage_payload(*clients: object) -> VKAIUsageResponse | None:
@@ -406,9 +421,24 @@ def _build_payload_from_public_group(public_group) -> tuple[list[dict], list[int
             "comments": int(item.comments or 0),
             "reposts": int(item.reposts or 0),
         }
-        for item in (public_group.posts or [])[:5]
+        for item in (public_group.posts or [])
     ]
     return posts, metrics_views, metrics_likes, metrics_comments, metrics_reposts, post_dates, top_posts
+
+
+def _is_sparse_post_content(posts: list[dict], *, min_posts: int = 6, min_text_chars: int = 120) -> bool:
+    if not posts:
+        return True
+    if len(posts) < min_posts:
+        return True
+
+    non_empty_texts = [str(item.get("text") or "").strip() for item in posts if str(item.get("text") or "").strip()]
+    if not non_empty_texts:
+        return True
+
+    avg_chars = sum(len(text) for text in non_empty_texts) / max(len(non_empty_texts), 1)
+    long_text_posts = sum(1 for text in non_empty_texts if len(text) >= min_text_chars)
+    return avg_chars < min_text_chars or long_text_posts < max(2, len(posts) // 5)
 
 
 def _is_bad_public_group_name(name: str | None) -> bool:
@@ -589,6 +619,22 @@ def _safe_save_analysis_history(*, source_input: str, post_limit: int, language:
 
 
 def _normalize_chat_messages(messages: list[dict] | None, limit: int = 120) -> list[dict]:
+    def _normalize_chat_text(value: object) -> str:
+        raw = str(value or "").replace("\r\n", "\n").replace("\r", "\n")
+        lines: list[str] = []
+        for line in raw.split("\n"):
+            lines.append(" ".join(line.split()).strip())
+        compact_lines: list[str] = []
+        previous_blank = False
+        for line in lines:
+            if line:
+                compact_lines.append(line)
+                previous_blank = False
+            elif not previous_blank:
+                compact_lines.append("")
+                previous_blank = True
+        return "\n".join(compact_lines).strip()
+
     normalized: list[dict] = []
     for item in messages or []:
         if not isinstance(item, dict):
@@ -596,7 +642,7 @@ def _normalize_chat_messages(messages: list[dict] | None, limit: int = 120) -> l
         role = str(item.get("role") or "").strip().lower()
         if role not in {"user", "assistant"}:
             continue
-        text = " ".join(str(item.get("text") or "").split()).strip()
+        text = _normalize_chat_text(item.get("text"))
         if not text:
             continue
         normalized.append(
@@ -699,7 +745,9 @@ def _build_recommendations_chat_prompt(
         "Отвечай только по данным отчета ниже, не придумывай фактов.\n"
         "Дай практичный план с конкретными шагами, примерами форматов и метриками контроля.\n"
         "Структура: 1) гипотеза, 2) что сделать в ближайшие 7 дней, 3) KPI/метрики.\n"
-        "Пиши кратко, предметно и по делу.\n\n"
+        "Пиши кратко, предметно и по делу.\n"
+        "Формат ответа: обычный текст с переносами строк, без markdown.\n"
+        "Каждый шаг плана — с новой строки, нумерация строго 1., 2., 3.\n\n"
         f"Language: {language or 'ru'}\n"
         f"Report JSON:\n{json.dumps(compact, ensure_ascii=False)}\n\n"
         f"Chat history:\n{history_text}\n\n"
@@ -735,6 +783,29 @@ def _fallback_recommendations_answer(report: dict, message: str) -> str:
         if title and action:
             lines.append(f"{title}: {action}")
     return "\n".join(lines)
+
+
+def _format_chat_answer_text(text: str) -> str:
+    value = str(text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not value:
+        return ""
+    value = re.sub(r"\n{3,}", "\n\n", value)
+    if "\n" not in value and len(value) >= 180:
+        # LLM sometimes returns one long paragraph; split by sentences/numbering.
+        value = re.sub(r"\s+(?=\d+\.)", "\n", value)
+        value = re.sub(r"(?<=[.!?])\s+(?=[А-ЯA-Z0-9])", "\n", value)
+        value = re.sub(r"\n{3,}", "\n\n", value)
+    lines = [" ".join(line.split()).strip() for line in value.split("\n")]
+    cleaned: list[str] = []
+    prev_blank = False
+    for line in lines:
+        if line:
+            cleaned.append(line)
+            prev_blank = False
+        elif not prev_blank:
+            cleaned.append("")
+            prev_blank = True
+    return "\n".join(cleaned).strip()
 
 
 @router.get("/browser/status", summary="VK browser profile status")
@@ -800,7 +871,7 @@ def vk_generate_post(
 ):
     try:
         client, ai_provider, _, _ = _build_text_ai_client(payload.ai_provider)
-    except Exception:
+    except Exception as exc:
         raise HTTPException(status_code=400, detail=f"AI is not configured: {exc}") from exc
 
     # For publishing, prioritize community token, but keep user-token fallback
@@ -883,6 +954,31 @@ def vk_generate_post(
             ],
         }
 
+    logger.info(
+        "VK_POST_GENERATE_PARSED prompt_chars=%s content_type=%s kb_chunks=%s kb_excerpt_chars=%s context_chars=%s",
+        len((payload.prompt or "").strip()),
+        payload.content_type,
+        len(kb_snippets),
+        len(kb_excerpt or ""),
+        len(json.dumps(context, ensure_ascii=False)),
+    )
+    logger.info(
+        "VK_POST_GENERATE_AI_REQUEST:\n%s",
+        _json_for_log(
+            {
+                "prompt": payload.prompt,
+                "language": payload.language,
+                "length": payload.length,
+                "theme": payload.theme,
+                "tone": payload.tone,
+                "content_type": payload.content_type,
+                "knowledge_base_excerpt": kb_excerpt or "",
+                "knowledge_chunks_used": kb_chunks_payload,
+                "context": context,
+            }
+        ),
+    )
+
     try:
         generated = client.generate_post(
             prompt=payload.prompt,
@@ -895,7 +991,21 @@ def vk_generate_post(
             content_type=payload.content_type,
         )
     except Exception as exc:
+        logger.exception("VK_POST_GENERATE_AI_ERROR: %s", exc)
         raise HTTPException(status_code=502, detail=f"{client.provider_name()} error: {exc}") from exc
+
+    logger.info(
+        "VK_POST_GENERATE_AI_RESPONSE:\n%s",
+        _json_for_log(
+            {
+                "content_type": generated.content_type,
+                "text": generated.text,
+                "story_frames": generated.story_frames,
+                "image_prompt": generated.image_prompt,
+                "video_script": generated.video_script,
+            }
+        ),
+    )
 
     text = generated.text
     generated_image_base64: str | None = None
@@ -1057,6 +1167,14 @@ def vk_generate_post(
         word_count = len([w for w in text.split() if w.strip()])
         token_estimate = max(1, int(round(char_count / 4)))
         ai_usage = _build_ai_usage_payload(client, media_usage_client)
+        logger.info(
+            "VK_POST_GENERATE_USAGE provider=%s requests=%s media_requests=%s usage=%s usage_events=%s",
+            getattr(client, "provider_name", lambda: "unknown")(),
+            getattr(client, "get_request_count", lambda: None)(),
+            getattr(media_usage_client, "get_request_count", lambda: None)() if media_usage_client else None,
+            ai_usage.model_dump() if ai_usage else None,
+            getattr(client, "get_usage_events", lambda: [])(),
+        )
         response_payload = VKAIPostResponse(
             text=text,
             published=True,
@@ -1094,6 +1212,14 @@ def vk_generate_post(
     word_count = len([w for w in text.split() if w.strip()])
     token_estimate = max(1, int(round(char_count / 4)))
     ai_usage = _build_ai_usage_payload(client, media_usage_client)
+    logger.info(
+        "VK_POST_GENERATE_USAGE provider=%s requests=%s media_requests=%s usage=%s usage_events=%s",
+        getattr(client, "provider_name", lambda: "unknown")(),
+        getattr(client, "get_request_count", lambda: None)(),
+        getattr(media_usage_client, "get_request_count", lambda: None)() if media_usage_client else None,
+        ai_usage.model_dump() if ai_usage else None,
+        getattr(client, "get_usage_events", lambda: [])(),
+    )
     response_payload = VKAIPostResponse(
         text=text,
         published=False,
@@ -1193,6 +1319,12 @@ def vk_group_analyze(
     payload: VKGroupAnalyzeRequest,
     vk_client: VKClient = Depends(get_vk_client),
 ):
+    logger.warning(
+        "VK_ANALYZE_TRACE_START source=%s post_limit=%s language=%s",
+        payload.source,
+        payload.post_limit,
+        payload.language,
+    )
     normalized, resolved_group_id = _resolve_group_identity(payload.source)
     group = {
         "id": int(resolved_group_id or 0),
@@ -1241,6 +1373,29 @@ def vk_group_analyze(
                 group["id"] = inferred_group_id
                 break
 
+    logger.warning(
+        "VK_ANALYZE_PARSED group=%s screen_name=%s posts=%s top_posts=%s",
+        group.get("name"),
+        group.get("screen_name"),
+        len(posts),
+        len(top_posts),
+    )
+    logger.warning(
+        "VK_ANALYZE_PARSED_PAYLOAD:\n%s",
+        _json_for_log(
+            {
+                "group": group,
+                "parsed_posts": posts,
+                "parsed_top_posts": top_posts,
+            }
+        ),
+    )
+
+    top_posts = [
+        item
+        for item in top_posts
+        if any(int(item.get(metric) or 0) > 0 for metric in ("views", "likes", "comments", "reposts"))
+    ]
     top_posts = sorted(
         top_posts,
         key=lambda p: (
@@ -1293,10 +1448,33 @@ def vk_group_analyze(
             "posts": posts[: max(1, min(len(posts), 30))],
             "local_clusters": local_ai_payload,
         }
+        logger.warning("VK_ANALYZE_AI_REQUEST:\n%s", _json_for_log(ai_payload))
         ai_result = _call_with_retries(
             lambda: client.analyze_group(payload=ai_payload, language=payload.language),
             attempts=3,
             base_delay_sec=0.9,
+        )
+        logger.warning(
+            "VK_ANALYZE_AI_RESPONSE:\n%s",
+            _json_for_log(
+                {
+                    "audience_interests": ai_result.audience_interests,
+                    "audience_age": ai_result.audience_age,
+                    "audience_activity": ai_result.audience_activity,
+                    "potential_competitors": ai_result.potential_competitors,
+                    "search_tags": ai_result.search_tags,
+                    "summary": ai_result.summary,
+                    "limitations": ai_result.limitations,
+                    "recommendations": [
+                        {
+                            "title": rec.title,
+                            "action": rec.action,
+                            "rationale": rec.rationale,
+                        }
+                        for rec in (ai_result.recommendations or [])
+                    ],
+                }
+            ),
         )
         ai_insights = VKGroupAIInsights(
             audience_interests=ai_result.audience_interests,
@@ -1344,8 +1522,19 @@ def vk_group_analyze(
             "message": f"{provider} analysis completed",
         }
         ai_usage_payload = _build_ai_usage_payload(client)
+        logger.warning(
+            "VK_ANALYZE_USAGE provider=%s requests=%s usage=%s usage_events=%s",
+            getattr(client, "provider_name", lambda: "unknown")(),
+            getattr(client, "get_request_count", lambda: None)(),
+            ai_usage_payload.model_dump() if ai_usage_payload else None,
+            getattr(client, "get_usage_events", lambda: [])(),
+        )
     except Exception as exc:
+        logger.exception("VK_ANALYZE_AI_ERROR: %s", exc)
         provider = _resolve_ai_provider(payload.ai_provider)
+        error_text = " ".join(str(exc).split()).strip()
+        if len(error_text) > 220:
+            error_text = error_text[:220].rstrip() + "..."
         ai_status = {
             "enabled": provider != "none",
             "available": False,
@@ -1353,15 +1542,34 @@ def vk_group_analyze(
             "provider": provider if provider != "none" else "local",
             "model": None,
             "auth_mode": None,
-            "message": "AI temporarily unavailable, used local fallback analysis.",
+            "message": (
+                f"AI temporarily unavailable, used local fallback analysis: {error_text}"
+                if error_text
+                else "AI temporarily unavailable, used local fallback analysis."
+            ),
         }
 
-    use_ai_tags_only = bool(ai_status.get("available"))
     group_context_name = f"{group.get('name', '')} {group.get('screen_name') or ''}".strip()
 
+    sparse_posts = _is_sparse_post_content(posts)
+    logger.warning(
+        "VK_ANALYZE_TAG_MODE sparse_posts=%s posts=%s ai_identity_tags=%s ai_search_tags=%s",
+        sparse_posts,
+        len(posts),
+        len(ai_identity_tags or []),
+        len(ai_insights.search_tags or []),
+    )
+
     raw_tags: list[str] = []
-    raw_tags.extend(ai_identity_tags or [])
-    raw_tags.extend(ai_insights.search_tags or [])
+    # When posts are sparse/noisy, prioritize identity tags generated from group card.
+    if sparse_posts and ai_identity_tags:
+        raw_tags.extend(ai_identity_tags)
+        raw_tags.extend(ai_insights.potential_competitors or [])
+        raw_tags.extend(ai_insights.search_tags or [])
+    else:
+        raw_tags.extend(ai_identity_tags or [])
+        raw_tags.extend(ai_insights.search_tags or [])
+        raw_tags.extend(ai_insights.potential_competitors or [])
 
     if not raw_tags:
         raw_tags.extend(_extract_ai_search_tags(ai_insights, limit=10))
@@ -1384,7 +1592,6 @@ def vk_group_analyze(
             group_activity=group.get("activity"),
             limit=8,
         )
-
     ai_insights.search_tags = ai_tags
     ai_insights.audience_interests = _normalize_ai_russian_list(
         ai_insights.audience_interests,
@@ -1402,7 +1609,12 @@ def vk_group_analyze(
     ai_topic_labels = _extract_ai_topic_labels(ai_insights, limit=4)
 
     competitors_found: list[dict] = []
-    if not (use_ai_tags_only and not ai_tags):
+    logger.warning(
+        "VK_ANALYZE_COMPETITOR_INPUT ai_tags=%s potential_competitors=%s",
+        ai_tags,
+        ai_insights.potential_competitors or [],
+    )
+    if ai_tags:
         try:
             competitors_found = _search_vk_competitors(
                 vk_client,
@@ -1416,32 +1628,12 @@ def vk_group_analyze(
                 source_posts=posts,
                 ai_tags=ai_tags,
                 topic_labels=ai_topic_labels,
-                use_ai_tags_only=use_ai_tags_only and bool(ai_tags),
+                use_ai_tags_only=True,
                 public_only=True,
                 limit=5,
             )
-        except Exception:
-            competitors_found = []
-    if not competitors_found and ai_tags:
-        broad_tags = [tag.split()[0] for tag in ai_tags[:4] if str(tag).strip()]
-        try:
-            competitors_found = _search_vk_competitors(
-                vk_client,
-                "",
-                current_group_id=group_id,
-                current_screen_name=group.get("screen_name"),
-                current_name=group.get("name", ""),
-                current_activity=group.get("activity"),
-                current_description=group.get("description"),
-                topic_clusters=[],
-                source_posts=posts,
-                ai_tags=broad_tags,
-                topic_labels=ai_topic_labels,
-                use_ai_tags_only=False,
-                public_only=True,
-                limit=5,
-            )
-        except Exception:
+        except Exception as exc:
+            logger.exception("VK_ANALYZE_COMPETITOR_SEARCH_ERROR: %s", exc)
             competitors_found = []
 
     audience_profile = _build_audience_profile(ai_insights, metrics)
@@ -1480,6 +1672,14 @@ def vk_group_analyze(
     )
     if history_id:
         response_payload = response_payload.model_copy(update={"history_id": int(history_id)})
+    logger.warning(
+        "VK_ANALYZE_TRACE_END source=%s posts=%s tags=%s competitors=%s history_id=%s",
+        payload.source,
+        int(metrics.total_posts_analyzed or 0),
+        len(ai_insights.search_tags or []),
+        len(competitors_found or []),
+        history_id,
+    )
     return response_payload
 
 
@@ -1647,6 +1847,7 @@ def vk_group_recommendations_chat(payload: VKRecommendationsChatRequest):
 
     if not answer:
         answer = _fallback_recommendations_answer(report_payload, message)
+    answer = _format_chat_answer_text(answer)
 
     new_messages = _normalize_chat_messages(
         [

@@ -2,6 +2,7 @@
 
 from collections import Counter
 from io import BytesIO
+import logging
 
 try:
     import matplotlib
@@ -16,6 +17,7 @@ from src.api.services.vk_client import VKClient
 from src.api.services.vk_public import fetch_public_group_data, search_public_groups
 
 STOPWORDS = {word.lower() for word in get_stopwords()}
+logger = logging.getLogger("uvicorn.error")
 _MONTH_QUERY_STEMS = {
     "\u044f\u043d\u0432",
     "\u0444\u0435\u0432",
@@ -148,9 +150,22 @@ def _search_vk_competitors(
     use_ai_tags_only: bool = False,
     public_only: bool = False,
     limit: int = 5,
+    public_search_fn=None,
+    public_group_fetch_fn=None,
 ) -> list[dict]:
+    public_search = public_search_fn or search_public_groups
+    public_group_fetch = public_group_fetch_fn or fetch_public_group_data
     source_posts = source_posts or []
+    logger.warning(
+        "VK_COMPETITOR_SEARCH_START group=%s screen=%s use_ai_tags_only=%s public_only=%s ai_tags_raw=%s",
+        current_name,
+        current_screen_name,
+        use_ai_tags_only,
+        public_only,
+        ai_tags or [],
+    )
     normalized_ai_tags = _normalize_terms(ai_tags or [], limit=16)
+    multi_tag_mode = bool(use_ai_tags_only and len(normalized_ai_tags) >= 4)
     topic_labels = [label.strip() for label in (topic_labels or []) if str(label).strip()]
 
     banned_name_terms = _brand_terms(current_screen_name or "")
@@ -159,7 +174,7 @@ def _search_vk_competitors(
         for token in _tokenize_loose(" ".join([current_name or "", current_activity or "", current_description or ""]))
         if _is_query_word(token) and token not in banned_name_terms
     }
-    if normalized_ai_tags:
+    if normalized_ai_tags and not use_ai_tags_only:
         normalized_ai_tags = [
             tag
             for tag in normalized_ai_tags
@@ -200,6 +215,10 @@ def _search_vk_competitors(
         if _is_query_term(term) and _is_specific_term(term, banned_terms=banned_name_terms)
     }
     if not source_terms:
+        logger.warning(
+            "VK_COMPETITOR_SEARCH_STOP reason=no_source_terms normalized_ai_tags=%s",
+            normalized_ai_tags,
+        )
         return []
 
     ranked_anchors = sorted(
@@ -210,27 +229,77 @@ def _search_vk_competitors(
     anchor_terms_set = set(ranked_anchors[:12])
     domain_terms = set(ranked_anchors[:18])
 
-    queries = _build_competitor_queries(
-        source_terms=source_terms,
-        source_tags=source_tags,
-        meta_tags=meta_tags,
-        ai_tags=normalized_ai_tags,
-        current_name=current_name,
-        allow_name_fallback=not use_ai_tags_only,
-    )
+    if use_ai_tags_only and normalized_ai_tags:
+        queries = _build_ai_phrase_queries(normalized_ai_tags, limit=12)
+    else:
+        queries = _build_competitor_queries(
+            source_terms=source_terms,
+            source_tags=source_tags,
+            meta_tags=meta_tags,
+            ai_tags=normalized_ai_tags,
+            current_name=current_name,
+            allow_name_fallback=not use_ai_tags_only,
+        )
     if not queries:
+        logger.warning(
+            "VK_COMPETITOR_SEARCH_STOP reason=no_queries source_terms=%s normalized_ai_tags=%s",
+            sorted(source_terms),
+            normalized_ai_tags,
+        )
         return []
+    if multi_tag_mode:
+        multiword_queries = [
+            query
+            for query in queries
+            if len([token for token in _tokenize_loose(query) if _is_query_word(token)]) >= 2
+        ]
+        if multiword_queries:
+            queries = multiword_queries
     if public_only:
-        multiword = [query for query in queries if len([token for token in _tokenize_loose(query) if _is_query_word(token)]) >= 2]
-        if multiword:
-            queries = multiword + [query for query in queries if query not in multiword][:4]
-        queries = queries[:5]
+        if use_ai_tags_only:
+            queries = queries[:8]
+        else:
+            multiword = [query for query in queries if len([token for token in _tokenize_loose(query) if _is_query_word(token)]) >= 2]
+            if multiword:
+                queries = multiword + [query for query in queries if query not in multiword][:4]
+            queries = queries[:5]
+    min_query_hits = _min_multi_query_hits(len(normalized_ai_tags))
+    min_overlap_hits = _min_multi_overlap_hits(len(source_terms))
+    logger.warning(
+        "VK_COMPETITOR_SEARCH_QUERIES queries=%s source_terms_count=%s normalized_ai_tags=%s multi_tag_mode=%s min_query_hits=%s min_overlap_hits=%s",
+        queries,
+        len(source_terms),
+        normalized_ai_tags,
+        multi_tag_mode,
+        min_query_hits,
+        min_overlap_hits,
+    )
 
     candidates: dict[str, dict] = {}
+    query_debug: list[dict[str, object]] = []
+    ai_token_pool = {
+        token
+        for tag in normalized_ai_tags
+        for token in _tokenize_loose(tag)
+        if _is_query_word(token)
+    }
     current_screen_name_l = (current_screen_name or "").lower()
     current_name_l = (current_name or "").lower()
 
     for query in queries:
+        query_stat = {
+            "query": query,
+            "api_total": 0,
+            "api_added": 0,
+            "api_relaxed_pass": 0,
+            "api_skip_self": 0,
+            "api_skip_query_mismatch": 0,
+            "public_total": 0,
+            "public_added": 0,
+            "public_relaxed_pass": 0,
+            "public_skip_self": 0,
+            "public_skip_query_mismatch": 0,
+        }
         query_tokens = {token for token in _tokenize_loose(query) if _is_query_word(token)}
         matched_terms = _match_terms(source_terms, query_tokens)
         query_has_digit_anchor = any(any(ch.isdigit() for ch in token) for token in query_tokens)
@@ -249,19 +318,23 @@ def _search_vk_competitors(
                 items = result.get("items", []) if isinstance(result, dict) else []
             except Exception:
                 items = []
+        query_stat["api_total"] = len(items)
 
         for item in items:
             if not isinstance(item, dict):
                 continue
             gid = int(item.get("id", 0) or 0)
             if not gid or gid == current_group_id:
+                query_stat["api_skip_self"] = int(query_stat["api_skip_self"]) + 1
                 continue
 
             name = str(item.get("name") or "").strip()
             screen_name = str(item.get("screen_name") or "").strip()
             if current_screen_name_l and screen_name.lower() == current_screen_name_l:
+                query_stat["api_skip_self"] = int(query_stat["api_skip_self"]) + 1
                 continue
             if current_name_l and name.lower() == current_name_l:
+                query_stat["api_skip_self"] = int(query_stat["api_skip_self"]) + 1
                 continue
 
             key = screen_name.lower() or str(gid)
@@ -278,12 +351,28 @@ def _search_vk_competitors(
             candidate_tokens_for_query = {
                 token for token in _tokenize_loose(haystack) if _is_query_word(token)
             }
-            if not _candidate_matches_query(
+            strict_match = _candidate_matches_query(
                 query_tokens=query_tokens,
                 candidate_tokens=candidate_tokens_for_query,
                 require_digit_anchor=query_has_digit_anchor,
-            ):
+            )
+            relaxed_match = False
+            if not strict_match and use_ai_tags_only and (not multi_tag_mode) and len(query_tokens) <= 2:
+                relaxed_match = _candidate_matches_query_relaxed(
+                    query_tokens=query_tokens,
+                    candidate_tokens=candidate_tokens_for_query,
+                    require_digit_anchor=query_has_digit_anchor,
+                )
+                if relaxed_match:
+                    query_stat["api_relaxed_pass"] = int(query_stat["api_relaxed_pass"]) + 1
+            if not strict_match and not relaxed_match:
+                query_stat["api_skip_query_mismatch"] = int(query_stat["api_skip_query_mismatch"]) + 1
                 continue
+            if multi_tag_mode:
+                pool_overlap = len(ai_token_pool & candidate_tokens_for_query)
+                if pool_overlap < max(3, min_overlap_hits - 1):
+                    query_stat["api_skip_query_mismatch"] = int(query_stat["api_skip_query_mismatch"]) + 1
+                    continue
 
             entry = candidates.get(key)
             if entry is None:
@@ -299,26 +388,46 @@ def _search_vk_competitors(
                     "_matched_terms": set(),
                 }
                 candidates[key] = entry
+                query_stat["api_added"] = int(query_stat["api_added"]) + 1
 
             if query not in entry["matched_by"]:
                 entry["matched_by"].append(query)
             entry["_query_quality"] = max(entry["_query_quality"], _query_quality(query, source_terms))
             entry["_matched_terms"].update(matched_terms)
 
-        for item in search_public_groups(query, limit=8 if public_only else 8):
+        public_items = public_search(query, limit=8 if public_only else 8)
+        query_stat["public_total"] = len(public_items)
+        for item in public_items:
             if current_screen_name_l and item.screen_name.lower() == current_screen_name_l:
+                query_stat["public_skip_self"] = int(query_stat["public_skip_self"]) + 1
                 continue
             candidate_tokens_for_query = {
                 token
                 for token in _tokenize_loose(f"{item.name} {item.screen_name}")
                 if _is_query_word(token)
             }
-            if not _candidate_matches_query(
+            strict_match = _candidate_matches_query(
                 query_tokens=query_tokens,
                 candidate_tokens=candidate_tokens_for_query,
                 require_digit_anchor=query_has_digit_anchor,
-            ):
+            )
+            relaxed_match = False
+            if not strict_match and use_ai_tags_only and (not multi_tag_mode) and len(query_tokens) <= 2:
+                relaxed_match = _candidate_matches_query_relaxed(
+                    query_tokens=query_tokens,
+                    candidate_tokens=candidate_tokens_for_query,
+                    require_digit_anchor=query_has_digit_anchor,
+                )
+                if relaxed_match:
+                    query_stat["public_relaxed_pass"] = int(query_stat["public_relaxed_pass"]) + 1
+            if not strict_match and not relaxed_match:
+                query_stat["public_skip_query_mismatch"] = int(query_stat["public_skip_query_mismatch"]) + 1
                 continue
+            if multi_tag_mode:
+                pool_overlap = len(ai_token_pool & candidate_tokens_for_query)
+                if pool_overlap < max(3, min_overlap_hits - 1):
+                    query_stat["public_skip_query_mismatch"] = int(query_stat["public_skip_query_mismatch"]) + 1
+                    continue
             key = item.screen_name.lower()
             if key not in candidates:
                 candidates[key] = {
@@ -332,6 +441,7 @@ def _search_vk_competitors(
                     "_query_quality": 0.0,
                     "_matched_terms": set(),
                 }
+                query_stat["public_added"] = int(query_stat["public_added"]) + 1
             if query not in candidates[key]["matched_by"]:
                 candidates[key]["matched_by"].append(query)
             candidates[key]["_query_quality"] = max(
@@ -339,8 +449,12 @@ def _search_vk_competitors(
                 _query_quality(query, source_terms),
             )
             candidates[key]["_matched_terms"].update(matched_terms)
+        query_debug.append(query_stat)
+
+    logger.warning("VK_COMPETITOR_SEARCH_QUERY_STATS stats=%s", query_debug)
 
     if not candidates:
+        logger.warning("VK_COMPETITOR_SEARCH_STOP reason=no_candidates_after_search")
         return []
 
     source_activity_tokens = {
@@ -348,6 +462,11 @@ def _search_vk_competitors(
     }
 
     preliminary: list[dict] = []
+    prelim_reject = {
+        "no_overlap": 0,
+        "weak_anchor_overlap": 0,
+        "insufficient_multi_tag_signal": 0,
+    }
     for candidate in candidates.values():
         candidate_tokens = {
             token
@@ -360,11 +479,19 @@ def _search_vk_competitors(
         domain_overlap = _match_terms(domain_terms, candidate_tokens) if domain_terms else set()
 
         if not overlap:
+            prelim_reject["no_overlap"] += 1
             continue
 
         if anchor_terms_set:
             strong_overlap = (anchor_terms_set & metadata_overlap) | (anchor_terms_set & query_overlap)
             if not strong_overlap and len(overlap) < 2:
+                prelim_reject["weak_anchor_overlap"] += 1
+                continue
+        if multi_tag_mode:
+            query_hit_count = len(candidate.get("matched_by") or [])
+            overlap_hit_count = len(overlap)
+            if query_hit_count < min_query_hits and overlap_hit_count < min_overlap_hits:
+                prelim_reject["insufficient_multi_tag_signal"] += 1
                 continue
 
         query_signal = float(candidate.get("_query_quality") or 0.0)
@@ -398,6 +525,12 @@ def _search_vk_competitors(
         candidate["_query_overlap_count"] = len(query_overlap)
         candidate["_score"] = score
         preliminary.append(candidate)
+    logger.warning(
+        "VK_COMPETITOR_SEARCH_PRELIMINARY candidates_total=%s preliminary=%s reject=%s",
+        len(candidates),
+        len(preliminary),
+        prelim_reject,
+    )
 
     preliminary.sort(
         key=lambda item: (
@@ -415,6 +548,12 @@ def _search_vk_competitors(
     ]
 
     validated: list[dict] = []
+    validate_reject = {
+        "no_metadata_and_content_overlap": 0,
+        "low_score": 0,
+        "no_matched_by": 0,
+        "insufficient_multi_tag_signal": 0,
+    }
     max_content_validate = 4 if public_only else 8
     for index, item in enumerate(preliminary[:12]):
         final_score = float(item.get("_score") or 0.0)
@@ -425,7 +564,7 @@ def _search_vk_competitors(
         screen_name = str(item.get("screen_name") or "").strip()
         if screen_name and index < max_content_validate:
             try:
-                public_data = fetch_public_group_data(screen_name, limit=6 if public_only else 8)
+                public_data = public_group_fetch(screen_name, limit=6 if public_only else 8)
                 candidate_posts = [{"text": post.text} for post in public_data.posts if (post.text or "").strip()]
                 if candidate_posts:
                     candidate_terms = set(_extract_source_tags(candidate_posts, limit=28))
@@ -444,8 +583,10 @@ def _search_vk_competitors(
                     continue
 
         if not metadata_overlap and not content_overlap:
+            validate_reject["no_metadata_and_content_overlap"] += 1
             continue
         if final_score < 0.24:
+            validate_reject["low_score"] += 1
             continue
 
         shared_topics: list[str] = []
@@ -463,7 +604,17 @@ def _search_vk_competitors(
             shared_topics = cluster_labels[:2]
 
         matched_by = [query for query in (item.get("matched_by") or []) if _is_query_term(query)][:10]
+        if multi_tag_mode:
+            matched_by = [
+                query
+                for query in matched_by
+                if len([token for token in _tokenize_loose(query) if _is_query_word(token)]) >= 2
+            ]
         if not matched_by:
+            validate_reject["no_matched_by"] += 1
+            continue
+        if multi_tag_mode and len(matched_by) < min_query_hits and len(overlap_terms) < min_overlap_hits:
+            validate_reject["insufficient_multi_tag_signal"] += 1
             continue
 
         why_similar = (
@@ -484,13 +635,79 @@ def _search_vk_competitors(
                 "similarity_score": round(final_score, 3),
             }
         )
+    logger.warning(
+        "VK_COMPETITOR_SEARCH_VALIDATION preliminary_checked=%s validated=%s reject=%s",
+        min(len(preliminary), 12),
+        len(validated),
+        validate_reject,
+    )
 
-    if not validated and not public_only:
-        fallback_queries = queries[:6]
+    if not validated and public_only:
+        fallback_queries = queries[:8]
+        fallback_added = 0
         for fallback_query in fallback_queries:
             query_tokens = {token for token in _tokenize_loose(fallback_query) if _is_query_word(token)}
             query_has_digit_anchor = any(any(ch.isdigit() for ch in token) for token in query_tokens)
-            for item in search_public_groups(fallback_query, limit=max(4, limit)):
+            for item in public_search(fallback_query, limit=max(5, limit * 3)):
+                screen_name = (item.screen_name or "").strip().lower()
+                if not screen_name:
+                    continue
+                if current_screen_name_l and screen_name == current_screen_name_l:
+                    continue
+                candidate_tokens = {
+                    token
+                    for token in _tokenize_loose(f"{item.name} {item.screen_name}")
+                    if _is_query_word(token)
+                }
+                strict_match = _candidate_matches_query(
+                    query_tokens=query_tokens,
+                    candidate_tokens=candidate_tokens,
+                    require_digit_anchor=query_has_digit_anchor,
+                )
+                relaxed_match = False
+                if use_ai_tags_only and (not multi_tag_mode) and not strict_match and len(query_tokens) <= 2:
+                    relaxed_match = _candidate_matches_query_relaxed(
+                        query_tokens=query_tokens,
+                        candidate_tokens=candidate_tokens,
+                        require_digit_anchor=query_has_digit_anchor,
+                    )
+                if not strict_match and not relaxed_match:
+                    continue
+                if multi_tag_mode:
+                    pool_overlap = len(ai_token_pool & candidate_tokens)
+                    if pool_overlap < max(3, min_overlap_hits - 1):
+                        continue
+                validated.append(
+                    {
+                        "group_id": abs(hash(item.screen_name)) % 1_000_000_000 + 1_000_000_000,
+                        "name": item.name,
+                        "screen_name": item.screen_name,
+                        "members_count": None,
+                        "activity": None,
+                        "matched_by": [fallback_query],
+                        "shared_topics": cluster_labels[:2],
+                        "why_similar": f"Найден через публичный VK search по тегу: {fallback_query}.",
+                        "similarity_score": 0.21,
+                    }
+                )
+                fallback_added += 1
+                if len(validated) >= limit * 2:
+                    break
+            if len(validated) >= limit * 2:
+                break
+        logger.warning(
+            "VK_COMPETITOR_SEARCH_FALLBACK_PUBLIC queries=%s added=%s",
+            fallback_queries,
+            fallback_added,
+        )
+
+    if not validated and not public_only:
+        fallback_queries = queries[:6]
+        fallback_added = 0
+        for fallback_query in fallback_queries:
+            query_tokens = {token for token in _tokenize_loose(fallback_query) if _is_query_word(token)}
+            query_has_digit_anchor = any(any(ch.isdigit() for ch in token) for token in query_tokens)
+            for item in public_search(fallback_query, limit=max(4, limit)):
                 screen_name = (item.screen_name or "").strip().lower()
                 if not screen_name:
                     continue
@@ -507,6 +724,10 @@ def _search_vk_competitors(
                     require_digit_anchor=query_has_digit_anchor,
                 ):
                     continue
+                if multi_tag_mode:
+                    pool_overlap = len(ai_token_pool & candidate_tokens)
+                    if pool_overlap < max(3, min_overlap_hits - 1):
+                        continue
                 validated.append(
                     {
                         "group_id": abs(hash(item.screen_name)) % 1_000_000_000 + 1_000_000_000,
@@ -520,14 +741,21 @@ def _search_vk_competitors(
                         "similarity_score": 0.22,
                     }
                 )
+                fallback_added += 1
                 if len(validated) >= limit * 2:
                     break
             if len(validated) >= limit * 2:
                 break
+        logger.warning(
+            "VK_COMPETITOR_SEARCH_FALLBACK_MIXED queries=%s added=%s",
+            fallback_queries,
+            fallback_added,
+        )
 
     if not validated and not use_ai_tags_only and not public_only:
         source_name_query = " ".join((current_name or "").split())
-        for item in search_public_groups(source_name_query, limit=max(3, limit * 2)):
+        source_name_added = 0
+        for item in public_search(source_name_query, limit=max(3, limit * 2)):
             screen_name = (item.screen_name or "").strip().lower()
             if not screen_name:
                 continue
@@ -549,6 +777,12 @@ def _search_vk_competitors(
                     "similarity_score": 0.24,
                 }
             )
+            source_name_added += 1
+        logger.warning(
+            "VK_COMPETITOR_SEARCH_FALLBACK_NAME query=%s added=%s",
+            source_name_query,
+            source_name_added,
+        )
 
     validated.sort(
         key=lambda item: (
@@ -572,6 +806,19 @@ def _search_vk_competitors(
         result.append(item)
         if len(result) >= limit:
             break
+    logger.warning(
+        "VK_COMPETITOR_SEARCH_RESULT result_count=%s items=%s",
+        len(result),
+        [
+            {
+                "name": str(item.get("name") or ""),
+                "screen_name": str(item.get("screen_name") or ""),
+                "similarity_score": float(item.get("similarity_score") or 0.0),
+                "matched_by": list(item.get("matched_by") or []),
+            }
+            for item in result
+        ],
+    )
     return result
 
 
@@ -673,6 +920,60 @@ def _build_competitor_queries(
     return deduped
 
 
+def _build_ai_phrase_queries(ai_tags: list[str], limit: int = 12) -> list[str]:
+    base_tags = [
+        _normalize_query_for_search(tag)
+        for tag in (ai_tags or [])
+    ]
+    base_tags = [tag for tag in base_tags if tag and _is_query_term(tag)]
+    seen: set[str] = set()
+    queries: list[str] = []
+
+    for tag in base_tags:
+        if tag in seen:
+            continue
+        seen.add(tag)
+        queries.append(tag)
+        if len(queries) >= limit:
+            return queries
+
+    # Blend neighboring AI tags into richer phrase queries.
+    for idx in range(len(base_tags) - 1):
+        left = base_tags[idx]
+        right = base_tags[idx + 1]
+        blended_parts: list[str] = []
+        blended_parts.extend(left.split()[:2])
+        blended_parts.extend(right.split()[:2])
+        blended = " ".join(blended_parts).strip()
+        blended = _normalize_query_for_search(blended)
+        if not blended or blended in seen or not _is_query_term(blended):
+            continue
+        seen.add(blended)
+        queries.append(blended)
+        if len(queries) >= limit:
+            break
+
+    return queries[:limit]
+
+
+def _min_multi_query_hits(ai_tags_count: int) -> int:
+    if ai_tags_count >= 8:
+        return 3
+    if ai_tags_count >= 5:
+        return 2
+    return 1
+
+
+def _min_multi_overlap_hits(source_terms_count: int) -> int:
+    if source_terms_count >= 12:
+        return 4
+    if source_terms_count >= 7:
+        return 3
+    if source_terms_count >= 4:
+        return 2
+    return 1
+
+
 def _normalize_query_for_search(value: str) -> str:
     normalized_value = str(value or "").replace("_", " ").replace("-", " ")
     tokens = [token for token in _tokenize_loose(normalized_value) if _is_query_word(token)]
@@ -736,6 +1037,40 @@ def _filter_tags_by_group_context(
             if len(filtered) >= limit:
                 break
     return filtered[:limit]
+
+
+def _finalize_search_tags_for_vk_ru(
+    tags: list[str] | tuple[str, ...],
+    *,
+    group_name: str,
+    group_description: str | None,
+    group_activity: str | None,
+    source_posts: list[dict] | None = None,
+    limit: int = 16,
+) -> list[str]:
+    """Нормализует и стабилизирует теги для поиска конкурентов в VK.
+
+    Функция оставляет только осмысленные запросы, сначала опираясь на контекст
+    группы (название/описание/активность), а если контекст слишком шумный —
+    добавляет сильные термы из постов как fallback.
+    """
+    source_posts = source_posts or []
+    normalized = _filter_tags_by_group_context(
+        tags or [],
+        group_name=group_name,
+        group_description=group_description,
+        group_activity=group_activity,
+        limit=max(limit * 2, 12),
+    )
+    if normalized:
+        return normalized[:limit]
+
+    fallback_terms = _extract_source_tags(source_posts, limit=max(limit * 2, 12))
+    fallback_terms = _normalize_terms(fallback_terms, limit=limit)
+    if fallback_terms:
+        return fallback_terms[:limit]
+
+    return _normalize_terms(list(tags or []), limit=limit)
 
 
 def _term_supported_by_context(term: str, context_terms: set[str]) -> bool:
@@ -992,6 +1327,29 @@ def _candidate_matches_query(
 
     if len(query_tokens) >= 3 and len(matched_query_tokens) < 2:
         return False
+    return True
+
+
+def _candidate_matches_query_relaxed(
+    *,
+    query_tokens: set[str],
+    candidate_tokens: set[str],
+    require_digit_anchor: bool,
+) -> bool:
+    if not query_tokens or not candidate_tokens:
+        return False
+
+    matched_query_tokens: set[str] = set()
+    for query_token in query_tokens:
+        if any(_tokens_similar(query_token, candidate) for candidate in candidate_tokens):
+            matched_query_tokens.add(query_token)
+
+    if not matched_query_tokens:
+        return False
+
+    if require_digit_anchor and not any(any(ch.isdigit() for ch in token) for token in matched_query_tokens):
+        return False
+
     return True
 
 

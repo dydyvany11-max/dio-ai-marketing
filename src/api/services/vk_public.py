@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 import sys
+import random
 from html import unescape
 import json
 import requests
@@ -79,6 +80,198 @@ class PublicVKSearchResult:
     name: str
     screen_name: str
 
+CHROME_VERSIONS: tuple[str, ...] = (
+    "120.0.0.0",
+    "119.0.0.0",
+    "118.0.0.0",
+    "117.0.0.0",
+    "116.0.0.0",
+    "115.0.0.0",
+    "114.0.0.0",
+)
+
+PLATFORMS: tuple[str, ...] = (
+    "Windows NT 10.0; Win64; x64",
+    "Windows NT 6.1; Win64; x64",
+    "Macintosh; Intel Mac OS X 10_15_7",
+    "X11; Linux x86_64",
+)
+
+SCREEN_RESOLUTIONS: tuple[dict[str, int], ...] = (
+    {"width": 1920, "height": 1080},
+    {"width": 1366, "height": 768},
+    {"width": 1536, "height": 864},
+    {"width": 1440, "height": 900},
+    {"width": 1280, "height": 720},
+)
+
+LANGUAGES: tuple[str, ...] = (
+    "en-US,en;q=0.9",
+    "ru-RU,ru;q=0.9,en;q=0.8",
+    "de-DE,de;q=0.9,en;q=0.8",
+    "fr-FR,fr;q=0.9,en;q=0.8",
+)
+
+FINGERPRINT_SPOOFING_SCRIPT = """
+() => {
+    delete navigator.__proto__.webdriver;
+
+    Object.defineProperty(navigator, 'plugins', {
+        get: () => [1, 2, 3, 4, 5],
+        configurable: true
+    });
+
+    Object.defineProperty(navigator, 'languages', {
+        get: () => ['%s', '%s'],
+        configurable: true
+    });
+
+    Object.defineProperty(navigator, 'platform', {
+        get: () => '%s',
+        configurable: true
+    });
+
+    Object.defineProperty(navigator, 'hardwareConcurrency', {
+        get: () => %d,
+        configurable: true
+    });
+
+    Object.defineProperty(navigator, 'webdriver', {
+        get: () => undefined,
+        configurable: true
+    });
+
+    const originalQuery = navigator.permissions.query;
+    navigator.permissions.query = (parameters) => (
+        parameters.name === 'notifications'
+            ? Promise.resolve({ state: Notification.permission })
+            : originalQuery(parameters)
+    );
+
+    window.chrome = {
+        runtime: {},
+        loadTimes: function() { return {}; },
+        csi: function() { return {}; },
+        src: { isInstalled: false }
+    };
+}
+"""
+
+WEBGL_SPOOFING_SCRIPT = """
+() => {
+    const getParameter = WebGLRenderingContext.prototype.getParameter;
+    WebGLRenderingContext.prototype.getParameter = function(parameter) {
+        if (parameter === 37445) return 'Intel Inc.';
+        if (parameter === 37446) return 'Intel Iris OpenGL Engine';
+        return getParameter.call(this, parameter);
+    };
+}
+"""
+
+CANVAS_SPOOFING_SCRIPT = """
+() => {
+    const toDataURL = HTMLCanvasElement.prototype.toDataURL;
+    HTMLCanvasElement.prototype.toDataURL = function(type) {
+        const context = this.getContext('2d');
+        if (context) {
+            context.fillText('Modified Canvas Fingerprint', 10, 10);
+        }
+        return toDataURL.call(this, type);
+    };
+}
+"""
+
+
+def _generate_user_agent() -> str:
+    return (
+        f"Mozilla/5.0 ({random.choice(PLATFORMS)}) "
+        f"AppleWebKit/537.36 (KHTML, like Gecko) "
+        f"Chrome/{random.choice(CHROME_VERSIONS)} Safari/537.36"
+    )
+
+
+def _generate_screen_resolution() -> dict[str, int]:
+    return random.choice(SCREEN_RESOLUTIONS)
+
+
+def _generate_accept_language() -> str:
+    return random.choice(LANGUAGES)
+
+
+def _generate_extra_http_headers() -> dict[str, str]:
+    return {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": _generate_accept_language(),
+        "Accept-Encoding": "gzip, deflate, br",
+        "Cache-Control": "no-cache",
+        "DNT": str(random.randint(0, 1)),
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"Windows"',
+    }
+
+
+def _build_stealth_scripts() -> tuple[str, ...]:
+    platform = random.choice(PLATFORMS)
+    return (
+        CANVAS_SPOOFING_SCRIPT,
+        FINGERPRINT_SPOOFING_SCRIPT % (
+            "ru-RU",
+            "ru",
+            platform,
+            random.choice([4, 8, 12, 16]),
+        ),
+        WEBGL_SPOOFING_SCRIPT,
+    )
+
+
+def _create_stealth_context(playwright, *, persistent_profile_dir: str | None = None):
+    screen_resolution = _generate_screen_resolution()
+    context_kwargs = {
+        "viewport": screen_resolution,
+        "screen": screen_resolution,
+        "user_agent": _generate_user_agent(),
+        "accept_downloads": False,
+        "ignore_https_errors": True,
+        "java_script_enabled": True,
+        "has_touch": random.choice([True, False]),
+        "is_mobile": False,
+        "extra_http_headers": _generate_extra_http_headers(),
+        "locale": "ru-RU",
+        "timezone_id": "Europe/Moscow",
+    }
+
+    if persistent_profile_dir:
+        context = playwright.chromium.launch_persistent_context(
+            persistent_profile_dir,
+            headless=True,
+            **context_kwargs,
+        )
+    else:
+        browser = playwright.chromium.launch(headless=True)
+        context = browser.new_context(**context_kwargs)
+        context._linked_browser = browser  # noqa: SLF001
+
+    for script in _build_stealth_scripts():
+        context.add_init_script(script)
+
+    return context
+
+
+def _close_context_with_browser(context) -> None:
+    try:
+        linked_browser = getattr(context, "_linked_browser", None)
+        context.close()
+        if linked_browser is not None:
+            linked_browser.close()
+    except Exception:
+        pass
+
 
 def vk_browser_profile_dir() -> Path:
     raw = os.getenv("VK_BROWSER_PROFILE_DIR", "").strip()
@@ -117,20 +310,24 @@ def search_public_groups(query: str, limit: int = 5) -> list[PublicVKSearchResul
     url = f"https://vk.com/search/communities?q={quote(clean_query)}"
     if sync_playwright is not None:
         with sync_playwright() as playwright:
-            if has_vk_browser_profile():
-                context = playwright.chromium.launch_persistent_context(
-                    str(vk_browser_profile_dir()),
-                    headless=True,
-                    viewport={"width": 1440, "height": 2400},
-                )
-            else:
-                context = playwright.chromium.launch(headless=True)
+            context = None
             try:
+                if has_vk_browser_profile():
+                    context = _create_stealth_context(
+                        playwright,
+                        persistent_profile_dir=str(vk_browser_profile_dir()),
+                    )
+                else:
+                    context = _create_stealth_context(playwright)
+
                 page = context.new_page()
                 page.goto(url, wait_until="domcontentloaded", timeout=60000)
                 page.wait_for_timeout(3500)
+
                 try:
-                    search_input = page.locator("input[placeholder='Enter a search'], input[placeholder='Search']").first
+                    search_input = page.locator(
+                        "input[placeholder='Enter a search'], input[placeholder='Search']"
+                    ).first
                     if search_input.count() > 0:
                         search_input.click(timeout=1200)
                         search_input.fill(clean_query, timeout=2000)
@@ -138,6 +335,7 @@ def search_public_groups(query: str, limit: int = 5) -> list[PublicVKSearchResul
                         page.wait_for_timeout(2200)
                 except Exception:
                     pass
+
                 raw_links = page.evaluate(
                     """() => Array.from(document.querySelectorAll('a[href]'))
                     .map(a => ({href: a.getAttribute('href') || '', text: (a.textContent || '').trim()}))
@@ -149,13 +347,10 @@ def search_public_groups(query: str, limit: int = 5) -> list[PublicVKSearchResul
             except Exception:
                 pass
             finally:
-                try:
-                    context.close()
-                except Exception:
-                    pass
+                if context is not None:
+                    _close_context_with_browser(context)
 
     return _search_public_groups_http(clean_query, limit)
-
 
 def _search_public_groups_http(query: str, limit: int) -> list[PublicVKSearchResult]:
     urls = [
@@ -198,17 +393,17 @@ def fetch_public_group_data(screen_name: str, group_id: int | None = None, limit
         f"https://m.vk.com/{clean_name}",
     ]
     urls = [url for url in urls if url]
+
     with sync_playwright() as playwright:
-        profile_dir = vk_browser_profile_dir()
         last_error: Exception | None = None
 
         if has_vk_browser_profile():
-            context = playwright.chromium.launch_persistent_context(
-                str(profile_dir),
-                headless=True,
-                viewport={"width": 1440, "height": 2400},
-            )
+            context = None
             try:
+                context = _create_stealth_context(
+                    playwright,
+                    persistent_profile_dir=str(vk_browser_profile_dir()),
+                )
                 result = _fetch_from_context(context, urls, clean_name, limit, group_id)
                 if result.posts:
                     return result
@@ -216,19 +411,21 @@ def fetch_public_group_data(screen_name: str, group_id: int | None = None, limit
             except Exception as exc:
                 last_error = exc
             finally:
-                context.close()
+                if context is not None:
+                    _close_context_with_browser(context)
 
-        browser = playwright.chromium.launch(headless=True)
+        context = None
         try:
-            result = _fetch_from_browser(browser, urls, clean_name, limit, group_id)
+            context = _create_stealth_context(playwright)
+            result = _fetch_from_context(context, urls, clean_name, limit, group_id)
             return result
         except Exception as exc:
             if last_error:
                 raise RuntimeError(f"Failed to load VK public page: {last_error}") from exc
             raise RuntimeError(f"Failed to load VK public page: {exc}") from exc
         finally:
-            browser.close()
-
+            if context is not None:
+                _close_context_with_browser(context)
 
 def _fetch_from_browser(browser, urls: list[str], clean_name: str, limit: int, group_id: int | None) -> PublicVKGroupData:
     last_error: Exception | None = None
@@ -279,10 +476,17 @@ def _fetch_from_context(context, urls: list[str], clean_name: str, limit: int, g
         return best_result
     return PublicVKGroupData(name=clean_name, screen_name=clean_name, posts=[])
 
-
+   
 def _fetch_from_page(page, url: str, clean_name: str, limit: int, group_id: int | None) -> PublicVKGroupData:
     page.goto(url, wait_until="domcontentloaded", timeout=60000)
     page.wait_for_timeout(4500)
+    print("URL AFTER GOTO:", page.url)
+    print("PAGE TITLE:", page.title())
+    print("HTML LEN:", len(page.content()))
+    print("DATA-POST-ID COUNT:", page.locator("[data-post-id]").count())
+    print("WALL LINKS COUNT:", page.locator("a[href*='wall-']").count())
+    html = page.content()
+    print(html[:3000])
     try:
         _scroll_feed_until_loaded(page, limit)
     except Exception:
