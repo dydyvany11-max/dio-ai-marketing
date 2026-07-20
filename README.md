@@ -1,1 +1,1 @@
-Andrey настоящий Gay
+Andrey настоящий Man
